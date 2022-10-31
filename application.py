@@ -138,8 +138,11 @@ class Application(tk.Tk):
         self.image_canvas.configure(bg='blue')
 
         self.image_container = self.image_canvas.create_image(0, 0, anchor=tk.NW, image=self.current_image)
-        self.rectangle_container = self.image_canvas.create_rectangle(0, 0, self.crop_size_x_entry.get_value(), self.crop_size_y_entry.get_value(), outline='white', width=3)
+        self.rectangle_container = self.image_canvas.create_rectangle(0, 0, self.crop_size_x_entry.get_value(),
+                                                                      self.crop_size_y_entry.get_value(),
+                                                                      outline='white', width=3)
 
+        self.bind("<Configure>", self.window_configure)
         self.console.write_info('UI init done.')
 
     def scale_output_checkbox_callback(self, value):
@@ -166,7 +169,6 @@ class Application(tk.Tk):
 
         self.image_canvas.update()
 
-
     def listbox_onclick(self, event):
         if self.files_listbox.get_list_length() == 0:
             return
@@ -177,10 +179,22 @@ class Application(tk.Tk):
             index = int(w.curselection()[0])
 
             self.current_image_index = index
-            self.current_image = tk.PhotoImage(file=self.input_files[index][1])
+            self.load_image_to_canvas()
 
-            self.image_canvas.itemconfig(self.image_container, image=self.current_image)
-            self.image_canvas.update()
+    def load_image_to_canvas(self):
+        raw_image = image.load_image(self.input_files[self.current_image_index][1])
+
+        if raw_image.width > raw_image.height:
+            self.current_image = ImageTk.PhotoImage(
+                image.resize_image(raw_image, width=self.image_canvas.winfo_width(), height=None))
+        else:
+            self.current_image = ImageTk.PhotoImage(
+                image.resize_image(raw_image, width=None, height=self.image_canvas.winfo_height()))
+
+        # self.current_scaled_image = image.resize_image(self.current_image)
+        self.image_canvas.itemconfig(self.image_container, image=self.current_image)
+        self.image_canvas.update()
+
 
     def canvas_mousemove(self, event):
         print('Currentx: ' + str(event.x) + ' currenty: ' + str(event.y))
@@ -192,6 +206,8 @@ class Application(tk.Tk):
         print(self.current_canvas_size_y)
         self.draw_rectangle()
 
+    def window_configure(self, event):
+        self.load_image_to_canvas()
 
     def bind_mousewheel_to_canvas(self, event):
         self.bind_all("<MouseWheel>", self.canvas_mousewheel)
@@ -231,6 +247,3 @@ class Application(tk.Tk):
 
     def canvas_mouseclick(self, event):
         print('Clicked')
-
-
-
