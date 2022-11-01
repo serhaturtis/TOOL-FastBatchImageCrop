@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 import time
 
 import ui_generics as ui
@@ -12,13 +13,15 @@ class Application(tk.Tk):
     console = None
 
     # widgets
-    input_entry = None
-    output_entry = None
+    input_path_entry = None
+    output_path_entry = None
     output_width_entry = None
     output_height_entry = None
     crop_size_x_entry = None
     crop_size_y_entry = None
     files_listbox = None
+    scale_output_checkbox = None
+    roll_on_crop_checkbox = None
     
     # image canvas
     image_canvas = None
@@ -26,7 +29,6 @@ class Application(tk.Tk):
     rectangle_container = None
     
     # data
-    scale_output = None
     current_image = None
     current_image_index = None
     current_scaled_image = None
@@ -36,6 +38,7 @@ class Application(tk.Tk):
     current_mouse_y = None
     input_files = None
     raw_image = None
+    crop_count = 0
     
     # appflow
     last_configure_time = None
@@ -79,18 +82,18 @@ class Application(tk.Tk):
         paths_frame.grid(column=0, row=0, sticky='news')
         paths_frame.columnconfigure(0, weight=1)
 
-        self.input_entry = ui.LabelEntryFolderBrowse('Input Folder', paths_frame, callback=self.set_images_to_listbox)
-        self.input_entry.grid(column=0, row=0, sticky='news')
+        self.input_path_entry = ui.LabelEntryFolderBrowse('Input Folder', paths_frame, callback=self.set_images_to_listbox)
+        self.input_path_entry.grid(column=0, row=0, sticky='news')
 
-        self.output_entry = ui.LabelEntryFolderBrowse('Output Folder', paths_frame)
-        self.output_entry.grid(column=0, row=1, sticky='news')
+        self.output_path_entry = ui.LabelEntryFolderBrowse('Output Folder', paths_frame)
+        self.output_path_entry.grid(column=0, row=1, sticky='news')
 
         parameters_frame = tk.LabelFrame(left_widget_canvas, text='Parameters')
         parameters_frame.grid(column=0, row=1, sticky='news')
         parameters_frame.columnconfigure(0, weight=1)
 
-        self.scale_output = ui.CheckBox('Scale Output', self.scale_output_checkbox_callback, parameters_frame)
-        self.scale_output.grid(column=0, row=0, sticky='news')
+        self.scale_output_checkbox = ui.CheckBox('Scale Output', self.scale_output_checkbox_callback, parameters_frame)
+        self.scale_output_checkbox.grid(column=0, row=0, sticky='news')
 
         self.output_width_entry = ui.LabelEntryInt('Output Width', parameters_frame)
         self.output_width_entry.grid(column=0, row=1, sticky='news')
@@ -107,6 +110,9 @@ class Application(tk.Tk):
         self.crop_size_y_entry = ui.LabelEntryInt('Crop Cursor Size Y', parameters_frame)
         self.crop_size_y_entry.grid(column=0, row=4, sticky='news')
         self.crop_size_y_entry.set_value(512)
+        
+        self.roll_on_crop_checkbox = ui.CheckBox('Roll On Crop', None, parameters_frame)
+        self.roll_on_crop_checkbox.grid(column=0, row=1, sticky='news')
 
         self.scale_output_checkbox_callback(0)
 
@@ -184,7 +190,7 @@ class Application(tk.Tk):
         self.raw_image = iops.load_image(self.input_files[self.current_image_index][1])
 
     def load_image_to_canvas(self):
-        if self.input_files is None:
+        if self.input_files is None or self.raw_image is None:
             return
 
         ratio = min(self.image_canvas.winfo_width()/self.raw_image.width, self.image_canvas.winfo_height()/self.raw_image.height)
@@ -201,13 +207,11 @@ class Application(tk.Tk):
 
 
     def canvas_mousemove(self, event):
-        print('Currentx: ' + str(event.x) + ' currenty: ' + str(event.y))
         self.current_mouse_x = event.x
         self.current_mouse_y = event.y
         self.current_canvas_size_x = self.image_canvas.winfo_width()
         self.current_canvas_size_y = self.image_canvas.winfo_height()
-        print(self.current_canvas_size_x)
-        print(self.current_canvas_size_y)
+
         self.draw_rectangle()
 
     def window_configure_callback(self, event):
@@ -255,4 +259,27 @@ class Application(tk.Tk):
         self.draw_rectangle()
 
     def canvas_mouseclick(self, event):
+        # take coordinates and crop
+        
+        # roll or not
+        if self.roll_on_crop_checkbox.get_value() == 1:
+            # roll
+            if self.files_listbox.get_list_length() == 0:
+                return
+                
+            index = self.files_listbox.get_widget().curselection()
+            if index:
+                index = int(self.files_listbox.get_widget().curselection()[0]) + 1
+                if index == self.files_listbox.get_list_length():
+                    messagebox.showwarning(title='Warning', message='Image list reached to end, rolling back to zero.')
+                    index = 0
+                
+                self.files_listbox.get_widget().selection_clear(0, tk.END)
+                self.files_listbox.get_widget().select_set(index) #This only sets focus on the first item.
+                self.files_listbox.get_widget().event_generate("<<ListboxSelect>>")
+
+                #self.current_image_index = index
+                #self.load_image_raw()
+                #self.load_image_to_canvas()
+            
         print('Clicked')

@@ -37,7 +37,8 @@ class CheckBox(tk.Frame):
         entry.grid(column=0, row=0, sticky='news')
 
     def state_callback(self):
-        self.callback_function(self.get_value())
+        if self.callback_function is not None:
+            self.callback_function(self.get_value())
 
     def get_value(self):
         return self.int_variable.get()
@@ -78,6 +79,9 @@ class ScrollableListbox(tk.LabelFrame):
     def bind_onclick(self, callback):
         self.onclick_callback = callback
         self.listbox.bind('<<ListboxSelect>>', callback)
+        
+    def get_widget(self):
+        return self.listbox
 
 
 class LabelEntryFileBrowse(tk.LabelFrame):
