@@ -71,7 +71,7 @@ class Application(tk.Tk):
 
     def init_ui(self):
         self.last_configure_time = time.time()
-        self.title('FastBatchCrop')
+        self.title('Fast Batch Image Crop')
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=7)
         self.rowconfigure(1, weight=1)
