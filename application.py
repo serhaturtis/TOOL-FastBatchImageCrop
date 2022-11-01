@@ -11,25 +11,22 @@ from PIL import ImageTk
 class Application(tk.Tk):
     console = None
 
-    # paths
+    # widgets
     input_entry = None
     output_entry = None
-
-    # parameters
-    scale_output = None
     output_width_entry = None
     output_height_entry = None
     crop_size_x_entry = None
     crop_size_y_entry = None
-
-    # files list
     files_listbox = None
-
+    
     # image canvas
     image_canvas = None
     image_container = None
     rectangle_container = None
-
+    
+    # data
+    scale_output = None
     current_image = None
     current_image_index = None
     current_scaled_image = None
@@ -37,8 +34,6 @@ class Application(tk.Tk):
     current_canvas_size_y = None
     current_mouse_x = None
     current_mouse_y = None
-
-    # current data
     input_files = None
     raw_image = None
     
