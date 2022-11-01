@@ -25,6 +25,7 @@ def validate_float(p):
 class CheckBox(tk.Frame):
     int_variable = None
     callback_function = None
+    button = None
 
     def __init__(self, text, callback, master=None):
         super().__init__()
@@ -33,8 +34,9 @@ class CheckBox(tk.Frame):
         self.callback_function = callback
         self.int_variable = tk.IntVar()
 
-        entry = tk.Checkbutton(self, text=text, variable=self.int_variable, command=self.state_callback, onvalue=1, offvalue=0)
-        entry.grid(column=0, row=0, sticky='news')
+        self.button = tk.Checkbutton(self, text=text, variable=self.int_variable, command=self.state_callback,
+                                     onvalue=1, offvalue=0)
+        self.button.grid(column=0, row=0, sticky='news')
 
     def state_callback(self):
         if self.callback_function is not None:
@@ -42,6 +44,11 @@ class CheckBox(tk.Frame):
 
     def get_value(self):
         return self.int_variable.get()
+
+    def set_value(self, value):
+        self.int_variable.set(value)
+        if self.callback_function is not None:
+            self.callback_function(self.get_value())
 
 
 class ScrollableListbox(tk.LabelFrame):
@@ -79,7 +86,7 @@ class ScrollableListbox(tk.LabelFrame):
     def bind_onclick(self, callback):
         self.onclick_callback = callback
         self.listbox.bind('<<ListboxSelect>>', callback)
-        
+
     def get_widget(self):
         return self.listbox
 
@@ -154,21 +161,29 @@ class LabelEntryFolderBrowse(tk.LabelFrame):
 
 class LabelEntryText(tk.LabelFrame):
     text_variable = None
+    entry = None
 
     def __init__(self, label, master=None):
         tk.LabelFrame.__init__(self, master, text=label)
         self.text_variable = tk.StringVar()
         self.rowconfigure(0, weight=1)
 
-        entry = tk.Entry(self, textvariable=self.text_variable)
-        entry.grid(column=0, row=0, sticky='news')
+        self.entry = tk.Entry(self, textvariable=self.text_variable)
+        self.entry.grid(column=0, row=0, sticky='news')
 
     def get_value(self):
         return self.text_variable.get()
 
+    def enable(self):
+        self.entry.config(state='normal')
+
+    def disable(self):
+        self.entry.config(state='disabled')
+
 
 class LabelEntryInt(tk.LabelFrame):
     text_variable = None
+    entry = None
 
     def __init__(self, label, master=None, initial_value=0):
         tk.LabelFrame.__init__(self, master, text=label)
@@ -177,9 +192,9 @@ class LabelEntryInt(tk.LabelFrame):
         self.columnconfigure(0, weight=1)
         vcmd = (self.register(validate_int))
 
-        entry = tk.Entry(self, textvariable=self.text_variable, validate='all',
-                         validatecommand=(vcmd, '%P'))
-        entry.grid(column=0, row=0, sticky='news', padx=5, pady=5)
+        self.entry = tk.Entry(self, textvariable=self.text_variable, validate='all',
+                              validatecommand=(vcmd, '%P'))
+        self.entry.grid(column=0, row=0, sticky='news', padx=5, pady=5)
 
     def get_value(self):
         return int(self.text_variable.get())
@@ -187,9 +202,16 @@ class LabelEntryInt(tk.LabelFrame):
     def set_value(self, value):
         self.text_variable.set(str(value))
 
+    def enable(self):
+        self.entry.config(state='normal')
+
+    def disable(self):
+        self.entry.config(state='disabled')
+
 
 class LabelEntryFloat(tk.LabelFrame):
     text_variable = None
+    entry = None
 
     def __init__(self, label, master=None, initial_value=0.0):
         tk.LabelFrame.__init__(self, master, text=label)
@@ -198,9 +220,15 @@ class LabelEntryFloat(tk.LabelFrame):
         self.columnconfigure(0, weight=1)
         vcmd = (self.register(validate_float))
 
-        entry = tk.Entry(self, textvariable=self.text_variable, validate='all',
-                         validatecommand=(vcmd, '%P'))
-        entry.grid(column=0, row=0, sticky='news')
+        self.entry = tk.Entry(self, textvariable=self.text_variable, validate='all',
+                              validatecommand=(vcmd, '%P'))
+        self.entry.grid(column=0, row=0, sticky='news')
+
+    def enable(self):
+        self.entry.config(state='normal')
+
+    def disable(self):
+        self.entry.config(state='disabled')
 
     def get_value(self):
         return float(self.text_variable.get())

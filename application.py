@@ -8,26 +8,36 @@ import imageops as iops
 
 from PIL import ImageTk
 
+CROP_RECT_MULTIPLIER = 8
+CROP_RECT_STEP_MIN = 2
+
+DEFAULT_ASPECT_X = 1
+DEFAULT_ASPECT_Y = 1
+
+DEFAULT_OUTPUT_WIDTH = 512
+DEFAULT_OUTPUT_HEIGHT = 512
 
 class Application(tk.Tk):
-    console = None
+    # params
+    current_crop_rect_multiplier_step = CROP_RECT_STEP_MIN
 
     # widgets
+    console = None
     input_path_entry = None
     output_path_entry = None
     output_width_entry = None
     output_height_entry = None
-    crop_size_x_entry = None
-    crop_size_y_entry = None
+    crop_aspect_x_entry = None
+    crop_aspect_y_entry = None
     files_listbox = None
     scale_output_checkbox = None
     roll_on_crop_checkbox = None
-    
+
     # image canvas
     image_canvas = None
     image_container = None
     rectangle_container = None
-    
+
     # data
     current_image = None
     current_image_index = None
@@ -36,15 +46,16 @@ class Application(tk.Tk):
     current_canvas_size_y = None
     current_mouse_x = None
     current_mouse_y = None
-    current_rectangle_tl = None
-    current_rectangle_tr = None
-    current_rectangle_bl = None
-    current_rectangle_br = None
+    current_rectangle_tx = None
+    current_rectangle_ty = None
+    current_rectangle_bx = None
+    current_rectangle_by = None
     input_files = None
     raw_image = None
     scaled_image = None
+    ratio = None
     crop_count = 0
-    
+
     # appflow
     last_configure_time = None
 
@@ -87,7 +98,8 @@ class Application(tk.Tk):
         paths_frame.grid(column=0, row=0, sticky='news')
         paths_frame.columnconfigure(0, weight=1)
 
-        self.input_path_entry = ui.LabelEntryFolderBrowse('Input Folder', paths_frame, callback=self.set_images_to_listbox)
+        self.input_path_entry = ui.LabelEntryFolderBrowse('Input Folder', paths_frame,
+                                                          callback=self.set_images_to_listbox)
         self.input_path_entry.grid(column=0, row=0, sticky='news')
 
         self.output_path_entry = ui.LabelEntryFolderBrowse('Output Folder', paths_frame)
@@ -100,26 +112,27 @@ class Application(tk.Tk):
         self.scale_output_checkbox = ui.CheckBox('Scale Output', self.scale_output_checkbox_callback, parameters_frame)
         self.scale_output_checkbox.grid(column=0, row=0, sticky='news')
 
-        self.output_width_entry = ui.LabelEntryInt('Output Width', parameters_frame)
-        self.output_width_entry.grid(column=0, row=1, sticky='news')
-        self.output_width_entry.set_value(512)
-
-        self.output_height_entry = ui.LabelEntryInt('Output Width', parameters_frame)
-        self.output_height_entry.grid(column=0, row=2, sticky='news')
-        self.output_height_entry.set_value(512)
-
-        self.crop_size_x_entry = ui.LabelEntryInt('Crop Cursor Size X', parameters_frame)
-        self.crop_size_x_entry.grid(column=0, row=3, sticky='news')
-        self.crop_size_x_entry.set_value(512)
-
-        self.crop_size_y_entry = ui.LabelEntryInt('Crop Cursor Size Y', parameters_frame)
-        self.crop_size_y_entry.grid(column=0, row=4, sticky='news')
-        self.crop_size_y_entry.set_value(512)
-        
         self.roll_on_crop_checkbox = ui.CheckBox('Roll On Crop', None, parameters_frame)
         self.roll_on_crop_checkbox.grid(column=0, row=1, sticky='news')
 
-        self.scale_output_checkbox_callback(0)
+        self.output_width_entry = ui.LabelEntryInt('Output Width', parameters_frame)
+        self.output_width_entry.grid(column=0, row=2, sticky='news')
+        self.output_width_entry.set_value(DEFAULT_OUTPUT_WIDTH)
+
+        self.output_height_entry = ui.LabelEntryInt('Output Width', parameters_frame)
+        self.output_height_entry.grid(column=0, row=3, sticky='news')
+        self.output_height_entry.set_value(DEFAULT_OUTPUT_HEIGHT)
+
+        self.crop_aspect_x_entry = ui.LabelEntryInt('Crop Aspect X', parameters_frame)
+        self.crop_aspect_x_entry.grid(column=0, row=4, sticky='news')
+        self.crop_aspect_x_entry.set_value(DEFAULT_ASPECT_X)
+
+        self.crop_aspect_y_entry = ui.LabelEntryInt('Crop Aspect Y', parameters_frame)
+        self.crop_aspect_y_entry.grid(column=0, row=5, sticky='news')
+        self.crop_aspect_y_entry.set_value(DEFAULT_ASPECT_Y)
+
+        self.scale_output_checkbox.set_value(0)
+        self.roll_on_crop_checkbox.set_value(1)
 
         # mid frame
         mid_frame = tk.Frame(main_frame)
@@ -144,12 +157,11 @@ class Application(tk.Tk):
         self.image_canvas.bind('<Enter>', self.bind_mousewheel_to_canvas)
         self.image_canvas.bind('<Leave>', self.unbind_mousewheel_to_canvas)
         self.image_canvas.bind('<ButtonRelease-1>', self.canvas_mouseclick)
-
         self.image_canvas.configure(bg='black')
 
-        self.image_container = self.image_canvas.create_image(0, 0, anchor=tk.CENTER, image=self.current_image)
-        self.rectangle_container = self.image_canvas.create_rectangle(0, 0, self.crop_size_x_entry.get_value(),
-                                                                      self.crop_size_y_entry.get_value(),
+        #self.image_container = self.image_canvas.create_image(0, 0, anchor=tk.CENTER, image=self.current_image)
+        self.rectangle_container = self.image_canvas.create_rectangle(0, 0, self.crop_aspect_x_entry.get_value(),
+                                                                      self.crop_aspect_y_entry.get_value(),
                                                                       outline='white', width=3)
 
         self.bind("<Configure>", self.window_configure_callback)
@@ -157,11 +169,11 @@ class Application(tk.Tk):
 
     def scale_output_checkbox_callback(self, value):
         if value == 1:
-            self.output_height_entry.grid()
-            self.output_width_entry.grid()
+            self.output_height_entry.enable()
+            self.output_width_entry.enable()
         else:
-            self.output_height_entry.grid_remove()
-            self.output_width_entry.grid_remove()
+            self.output_height_entry.disable()
+            self.output_width_entry.disable()
 
     def set_images_to_listbox(self, path):
         self.files_listbox.clear()
@@ -169,18 +181,52 @@ class Application(tk.Tk):
         self.files_listbox.set_data(self.input_files)
         self.console.write_info('Found ' + str(len(self.input_files)) + ' image(s).')
 
+        if self.files_listbox.get_list_length() != 0:
+            self.files_listbox.get_widget().selection_clear(0, tk.END)
+            self.files_listbox.get_widget().select_set(0)
+            self.files_listbox.get_widget().event_generate("<<ListboxSelect>>")
+
     def draw_rectangle(self):
-        half_x = self.crop_size_x_entry.get_value()/2
-        half_y = self.crop_size_y_entry.get_value()/2
-        
+        rect_aspect_ratio = self.crop_aspect_x_entry.get_value()/self.crop_aspect_y_entry.get_value()
+        rect_half_x = self.current_crop_rect_multiplier_step * CROP_RECT_MULTIPLIER / 2
+        rect_half_y = int(rect_half_x*rect_aspect_ratio)
+        canvas_half_x = self.image_canvas.winfo_width() / 2
+        canvas_half_y = self.image_canvas.winfo_height() / 2
+
         # left
-        if self.current_mouse_x < self.current_image.width()/2
-        
-        self.image_canvas.coords(self.rectangle_container,
-                                 self.current_mouse_x - self.crop_size_x_entry.get_value() / 2,
-                                 self.current_mouse_y - self.crop_size_y_entry.get_value() / 2,
-                                 self.current_mouse_x + self.crop_size_x_entry.get_value() / 2,
-                                 self.current_mouse_y + self.crop_size_y_entry.get_value() / 2)
+        if self.current_image is not None:
+            image_half_x = self.current_image.width() / 2
+            image_half_y = self.current_image.height() / 2
+
+            # x axis
+            if self.current_mouse_x < canvas_half_x - image_half_x + rect_half_x:
+                self.current_rectangle_tx = canvas_half_x - image_half_x
+                self.current_rectangle_bx = canvas_half_x - image_half_x + rect_half_x * 2
+            elif self.current_mouse_x + rect_half_x > canvas_half_x + image_half_x:
+                self.current_rectangle_tx = canvas_half_x + image_half_x - rect_half_x * 2
+                self.current_rectangle_bx = canvas_half_x + image_half_x
+            else:
+                self.current_rectangle_tx = self.current_mouse_x - rect_half_x
+                self.current_rectangle_bx = self.current_mouse_x + rect_half_x
+
+            # y axis
+            if self.current_mouse_y < canvas_half_y - image_half_y + rect_half_y:
+                self.current_rectangle_ty = canvas_half_y - image_half_y
+                self.current_rectangle_by = canvas_half_y - image_half_y + rect_half_y * 2
+            elif self.current_mouse_y + rect_half_y > canvas_half_y + image_half_y:
+                self.current_rectangle_ty = canvas_half_y + image_half_y - rect_half_y * 2
+                self.current_rectangle_by = canvas_half_y + image_half_y
+            else:
+                self.current_rectangle_ty = self.current_mouse_y - rect_half_y
+                self.current_rectangle_by = self.current_mouse_y + rect_half_y
+        else:
+            self.current_rectangle_tx = self.current_mouse_x - rect_half_x
+            self.current_rectangle_bx = self.current_mouse_x + rect_half_x
+            self.current_rectangle_ty = self.current_mouse_y - rect_half_y
+            self.current_rectangle_by = self.current_mouse_y + rect_half_y
+
+        self.image_canvas.coords(self.rectangle_container, self.current_rectangle_tx, self.current_rectangle_ty,
+                                 self.current_rectangle_bx, self.current_rectangle_by)
 
         self.image_canvas.update()
 
@@ -204,20 +250,25 @@ class Application(tk.Tk):
         if self.input_files is None or self.raw_image is None:
             return
 
-        ratio = min(self.image_canvas.winfo_width()/self.raw_image.width, self.image_canvas.winfo_height()/self.raw_image.height)
-        self.scaled_image = iops.scale_image(self.raw_image, ratio)
+        self.ratio = min(self.image_canvas.winfo_width() / self.raw_image.width,
+                         self.image_canvas.winfo_height() / self.raw_image.height)
+        self.scaled_image = iops.scale_image(self.raw_image, self.ratio)
         self.current_image = ImageTk.PhotoImage(self.scaled_image)
-        
+
         self.image_canvas.delete('all')
 
-        self.image_container = self.image_canvas.create_image(self.image_canvas.winfo_width()/2, self.image_canvas.winfo_height()/2, anchor=tk.CENTER, image=self.current_image)
-        self.rectangle_container = self.image_canvas.create_rectangle(self.current_mouse_x, self.current_mouse_y, self.crop_size_x_entry.get_value(),
-                                                                      self.crop_size_y_entry.get_value(),
-                                                                      outline='white', width=3)
-                                                                      
-        self.draw_rectangle()
-        self.image_canvas.update()
+        self.image_container = self.image_canvas.create_image(self.image_canvas.winfo_width() / 2,
+                                                              self.image_canvas.winfo_height() / 2, anchor=tk.CENTER,
+                                                              image=self.current_image)
 
+        rect_ratio = self.crop_aspect_x_entry.get_value()/self.crop_aspect_y_entry.get_value()
+        rect_x = self.current_crop_rect_multiplier_step*CROP_RECT_MULTIPLIER
+        rect_y = rect_x*rect_ratio
+        self.rectangle_container = self.image_canvas.create_rectangle(self.current_mouse_x, self.current_mouse_y,
+                                                                      rect_x,
+                                                                      rect_y,
+                                                                      outline='white', width=3)
+        self.draw_rectangle()
 
     def canvas_mousemove(self, event):
         self.current_mouse_x = event.x
@@ -230,10 +281,9 @@ class Application(tk.Tk):
     def window_configure_callback(self, event):
         cur_time = time.time()
         if (cur_time - self.last_configure_time) > 2:
-             self.load_image_to_canvas()
-             
+            self.load_image_to_canvas()
+
         self.last_configure_time = time.time()
-        
 
     def bind_mousewheel_to_canvas(self, event):
         self.bind_all("<MouseWheel>", self.canvas_mousewheel)
@@ -246,53 +296,47 @@ class Application(tk.Tk):
         self.unbind_all("<Button-5>")
 
     def canvas_mousewheel(self, event):
-        if event.num == 4 or event.delta == -120:
-            new_x_val = (self.crop_size_x_entry.get_value() + 16)
-            if new_x_val > 512:
-                new_x_val = 512
+        if self.current_image is not None:
+            if event.num == 4 or event.delta == -120:
+                rect_ratio = self.crop_aspect_x_entry.get_value()/self.crop_aspect_y_entry.get_value()
+                new_multiplier_step = self.current_crop_rect_multiplier_step + 1
 
-            new_y_val = (self.crop_size_y_entry.get_value() + 16)
-            if new_y_val > 512:
-                new_y_val = 512
+                if (CROP_RECT_MULTIPLIER * new_multiplier_step < self.scaled_image.width) and (CROP_RECT_MULTIPLIER * new_multiplier_step * rect_ratio < self.scaled_image.height):
+                    self.current_crop_rect_multiplier_step = new_multiplier_step
 
-            self.crop_size_x_entry.set_value(new_x_val)
-            self.crop_size_y_entry.set_value(new_y_val)
-
-        if event.num == 5 or event.delta == 120:
-            new_x_val = self.crop_size_x_entry.get_value() - 16
-            if new_x_val < 32:
-                new_x_val = 32
-
-            new_y_val = self.crop_size_y_entry.get_value() - 16
-            if new_y_val < 32:
-                new_y_val = 32
-            self.crop_size_x_entry.set_value(new_x_val)
-            self.crop_size_y_entry.set_value(new_y_val)
+            if event.num == 5 or event.delta == 120:
+                self.current_crop_rect_multiplier_step = self.current_crop_rect_multiplier_step - 1
+                if self.current_crop_rect_multiplier_step < CROP_RECT_STEP_MIN:
+                    self.current_crop_rect_multiplier_step = CROP_RECT_STEP_MIN
 
         self.draw_rectangle()
 
     def canvas_mouseclick(self, event):
+        # check output path given
+        if not self.output_path_entry.get_value():
+            messagebox.showerror(title='Error', message='No output path given.')
+            return
         # take coordinates and crop
-        
+
         # roll or not
         if self.roll_on_crop_checkbox.get_value() == 1:
             # roll
             if self.files_listbox.get_list_length() == 0:
                 return
-                
+
             index = self.files_listbox.get_widget().curselection()
             if index:
                 index = int(self.files_listbox.get_widget().curselection()[0]) + 1
                 if index == self.files_listbox.get_list_length():
                     messagebox.showwarning(title='Warning', message='Image list reached to end, rolling back to zero.')
                     index = 0
-                
+
                 self.files_listbox.get_widget().selection_clear(0, tk.END)
                 self.files_listbox.get_widget().select_set(index)
                 self.files_listbox.get_widget().event_generate("<<ListboxSelect>>")
 
-                #self.current_image_index = index
-                #self.load_image_raw()
-                #self.load_image_to_canvas()
-            
+                # self.current_image_index = index
+                # self.load_image_raw()
+                # self.load_image_to_canvas()
+
         print('Clicked')
