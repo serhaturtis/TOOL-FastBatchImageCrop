@@ -36,8 +36,13 @@ class Application(tk.Tk):
     current_canvas_size_y = None
     current_mouse_x = None
     current_mouse_y = None
+    current_rectangle_tl = None
+    current_rectangle_tr = None
+    current_rectangle_bl = None
+    current_rectangle_br = None
     input_files = None
     raw_image = None
+    scaled_image = None
     crop_count = 0
     
     # appflow
@@ -140,7 +145,7 @@ class Application(tk.Tk):
         self.image_canvas.bind('<Leave>', self.unbind_mousewheel_to_canvas)
         self.image_canvas.bind('<ButtonRelease-1>', self.canvas_mouseclick)
 
-        self.image_canvas.configure(bg='blue')
+        self.image_canvas.configure(bg='black')
 
         self.image_container = self.image_canvas.create_image(0, 0, anchor=tk.CENTER, image=self.current_image)
         self.rectangle_container = self.image_canvas.create_rectangle(0, 0, self.crop_size_x_entry.get_value(),
@@ -165,6 +170,12 @@ class Application(tk.Tk):
         self.console.write_info('Found ' + str(len(self.input_files)) + ' image(s).')
 
     def draw_rectangle(self):
+        half_x = self.crop_size_x_entry.get_value()/2
+        half_y = self.crop_size_y_entry.get_value()/2
+        
+        # left
+        if self.current_mouse_x < self.current_image.width()/2
+        
         self.image_canvas.coords(self.rectangle_container,
                                  self.current_mouse_x - self.crop_size_x_entry.get_value() / 2,
                                  self.current_mouse_y - self.crop_size_y_entry.get_value() / 2,
@@ -194,15 +205,17 @@ class Application(tk.Tk):
             return
 
         ratio = min(self.image_canvas.winfo_width()/self.raw_image.width, self.image_canvas.winfo_height()/self.raw_image.height)
-        self.current_image = ImageTk.PhotoImage(iops.scale_image(self.raw_image, ratio))
+        self.scaled_image = iops.scale_image(self.raw_image, ratio)
+        self.current_image = ImageTk.PhotoImage(self.scaled_image)
         
-        self.image_canvas.delete("all")
+        self.image_canvas.delete('all')
 
         self.image_container = self.image_canvas.create_image(self.image_canvas.winfo_width()/2, self.image_canvas.winfo_height()/2, anchor=tk.CENTER, image=self.current_image)
-        self.rectangle_container = self.image_canvas.create_rectangle(0, 0, self.crop_size_x_entry.get_value(),
+        self.rectangle_container = self.image_canvas.create_rectangle(self.current_mouse_x, self.current_mouse_y, self.crop_size_x_entry.get_value(),
                                                                       self.crop_size_y_entry.get_value(),
                                                                       outline='white', width=3)
-        
+                                                                      
+        self.draw_rectangle()
         self.image_canvas.update()
 
 
@@ -275,7 +288,7 @@ class Application(tk.Tk):
                     index = 0
                 
                 self.files_listbox.get_widget().selection_clear(0, tk.END)
-                self.files_listbox.get_widget().select_set(index) #This only sets focus on the first item.
+                self.files_listbox.get_widget().select_set(index)
                 self.files_listbox.get_widget().event_generate("<<ListboxSelect>>")
 
                 #self.current_image_index = index
