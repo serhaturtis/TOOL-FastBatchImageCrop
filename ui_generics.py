@@ -115,11 +115,13 @@ class LabelEntryFileBrowse(tk.LabelFrame):
 class LabelEntryFolderBrowse(tk.LabelFrame):
     text_variable = None
     last_path = ''
+    callback_f = None
 
-    def __init__(self, label, master=None):
+    def __init__(self, label, master=None, callback=None):
         super().__init__()
         tk.LabelFrame.__init__(self, master, text=label)
 
+        self.callback_f = callback
         self.text_variable = tk.StringVar()
         self.columnconfigure(0, weight=3)
         self.columnconfigure(1, weight=1)
@@ -139,6 +141,8 @@ class LabelEntryFolderBrowse(tk.LabelFrame):
         path = tk.filedialog.askdirectory(initialdir=initialpath)
         self.last_path = path
         self.text_variable.set(path)
+        if self.callback_f is not None:
+            self.callback_f(self.last_path)
 
     def get_value(self):
         return self.text_variable.get()
