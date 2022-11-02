@@ -2,7 +2,7 @@ import glob
 import os
 
 def get_image_files(path):
-    types = ('*.jpg', '*.jpeg', '*.png', '*.webp')
+    types = ('*.jpg', '*.JPG', '*.jpeg', '*.JPEG', '*.png', '*.PNG' '*.webp', '*.WEBP')
     filepaths = []
     filenames = []
     for type in types:

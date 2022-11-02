@@ -187,7 +187,7 @@ class Application(tk.Tk):
             self.files_listbox.get_widget().event_generate("<<ListboxSelect>>")
 
     def draw_rectangle(self):
-        rect_aspect_ratio = self.crop_aspect_x_entry.get_value()/self.crop_aspect_y_entry.get_value()
+        rect_aspect_ratio = self.crop_aspect_y_entry.get_value()/self.crop_aspect_x_entry.get_value()
         rect_half_x = self.current_crop_rect_multiplier_step * CROP_RECT_MULTIPLIER / 2
         rect_half_y = int(rect_half_x*rect_aspect_ratio)
         canvas_half_x = self.image_canvas.winfo_width() / 2
@@ -250,18 +250,18 @@ class Application(tk.Tk):
         if self.input_files is None or self.raw_image is None:
             return
 
+        self.image_canvas.delete('all')
+        
         self.ratio = min(self.image_canvas.winfo_width() / self.raw_image.width,
                          self.image_canvas.winfo_height() / self.raw_image.height)
         self.scaled_image = iops.scale_image(self.raw_image, self.ratio)
         self.current_image = ImageTk.PhotoImage(self.scaled_image)
 
-        self.image_canvas.delete('all')
-
         self.image_container = self.image_canvas.create_image(self.image_canvas.winfo_width() / 2,
                                                               self.image_canvas.winfo_height() / 2, anchor=tk.CENTER,
                                                               image=self.current_image)
 
-        rect_ratio = self.crop_aspect_x_entry.get_value()/self.crop_aspect_y_entry.get_value()
+        rect_ratio = self.crop_aspect_y_entry.get_value()/self.crop_aspect_x_entry.get_value()
         rect_x = self.current_crop_rect_multiplier_step*CROP_RECT_MULTIPLIER
         rect_y = rect_x*rect_ratio
         self.rectangle_container = self.image_canvas.create_rectangle(self.current_mouse_x, self.current_mouse_y,
@@ -298,7 +298,7 @@ class Application(tk.Tk):
     def canvas_mousewheel(self, event):
         if self.current_image is not None:
             if event.num == 4 or event.delta == -120:
-                rect_ratio = self.crop_aspect_x_entry.get_value()/self.crop_aspect_y_entry.get_value()
+                rect_ratio = self.crop_aspect_y_entry.get_value()/self.crop_aspect_x_entry.get_value()
                 new_multiplier_step = self.current_crop_rect_multiplier_step + 1
 
                 if (CROP_RECT_MULTIPLIER * new_multiplier_step < self.scaled_image.width) and (CROP_RECT_MULTIPLIER * new_multiplier_step * rect_ratio < self.scaled_image.height):
