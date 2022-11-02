@@ -17,6 +17,7 @@ DEFAULT_ASPECT_Y = 1
 DEFAULT_OUTPUT_WIDTH = 512
 DEFAULT_OUTPUT_HEIGHT = 512
 
+
 class Application(tk.Tk):
     # params
     current_crop_rect_multiplier_step = CROP_RECT_STEP_MIN
@@ -99,7 +100,7 @@ class Application(tk.Tk):
         paths_frame.columnconfigure(0, weight=1)
 
         self.input_path_entry = ui.LabelEntryFolderBrowse('Input Folder', paths_frame,
-                                                          callback=self.set_images_to_listbox)
+                                                          callback=self.set_files_to_listbox)
         self.input_path_entry.grid(column=0, row=0, sticky='news')
 
         self.output_path_entry = ui.LabelEntryFolderBrowse('Output Folder', paths_frame)
@@ -159,7 +160,7 @@ class Application(tk.Tk):
         self.image_canvas.bind('<ButtonRelease-1>', self.canvas_mouseclick)
         self.image_canvas.configure(bg='black')
 
-        #self.image_container = self.image_canvas.create_image(0, 0, anchor=tk.CENTER, image=self.current_image)
+        # self.image_container = self.image_canvas.create_image(0, 0, anchor=tk.CENTER, image=self.current_image)
         self.rectangle_container = self.image_canvas.create_rectangle(0, 0, self.crop_aspect_x_entry.get_value(),
                                                                       self.crop_aspect_y_entry.get_value(),
                                                                       outline='white', width=3)
@@ -175,21 +176,24 @@ class Application(tk.Tk):
             self.output_height_entry.disable()
             self.output_width_entry.disable()
 
-    def set_images_to_listbox(self, path):
+    def set_files_to_listbox(self, path):
+        self.image_canvas.delete('all')
         self.files_listbox.clear()
         self.input_files = fops.get_image_files(path)
         self.files_listbox.set_data(self.input_files)
-        self.console.write_info('Found ' + str(len(self.input_files)) + ' image(s).')
 
         if self.files_listbox.get_list_length() != 0:
             self.files_listbox.get_widget().selection_clear(0, tk.END)
             self.files_listbox.get_widget().select_set(0)
+            self.current_image_index = 0
             self.files_listbox.get_widget().event_generate("<<ListboxSelect>>")
 
+        self.console.write_info('Found ' + str(len(self.input_files)) + ' image(s).')
+
     def draw_rectangle(self):
-        rect_aspect_ratio = self.crop_aspect_y_entry.get_value()/self.crop_aspect_x_entry.get_value()
+        rect_aspect_ratio = self.crop_aspect_y_entry.get_value() / self.crop_aspect_x_entry.get_value()
         rect_half_x = self.current_crop_rect_multiplier_step * CROP_RECT_MULTIPLIER / 2
-        rect_half_y = int(rect_half_x*rect_aspect_ratio)
+        rect_half_y = int(rect_half_x * rect_aspect_ratio)
         canvas_half_x = self.image_canvas.winfo_width() / 2
         canvas_half_y = self.image_canvas.winfo_height() / 2
 
@@ -251,7 +255,7 @@ class Application(tk.Tk):
             return
 
         self.image_canvas.delete('all')
-        
+
         self.ratio = min(self.image_canvas.winfo_width() / self.raw_image.width,
                          self.image_canvas.winfo_height() / self.raw_image.height)
         self.scaled_image = iops.scale_image(self.raw_image, self.ratio)
@@ -261,9 +265,9 @@ class Application(tk.Tk):
                                                               self.image_canvas.winfo_height() / 2, anchor=tk.CENTER,
                                                               image=self.current_image)
 
-        rect_ratio = self.crop_aspect_y_entry.get_value()/self.crop_aspect_x_entry.get_value()
-        rect_x = self.current_crop_rect_multiplier_step*CROP_RECT_MULTIPLIER
-        rect_y = rect_x*rect_ratio
+        rect_ratio = self.crop_aspect_y_entry.get_value() / self.crop_aspect_x_entry.get_value()
+        rect_x = self.current_crop_rect_multiplier_step * CROP_RECT_MULTIPLIER
+        rect_y = rect_x * rect_ratio
         self.rectangle_container = self.image_canvas.create_rectangle(self.current_mouse_x, self.current_mouse_y,
                                                                       rect_x,
                                                                       rect_y,
@@ -298,10 +302,11 @@ class Application(tk.Tk):
     def canvas_mousewheel(self, event):
         if self.current_image is not None:
             if event.num == 4 or event.delta == -120:
-                rect_ratio = self.crop_aspect_y_entry.get_value()/self.crop_aspect_x_entry.get_value()
+                rect_ratio = self.crop_aspect_y_entry.get_value() / self.crop_aspect_x_entry.get_value()
                 new_multiplier_step = self.current_crop_rect_multiplier_step + 1
 
-                if (CROP_RECT_MULTIPLIER * new_multiplier_step < self.scaled_image.width) and (CROP_RECT_MULTIPLIER * new_multiplier_step * rect_ratio < self.scaled_image.height):
+                if (CROP_RECT_MULTIPLIER * new_multiplier_step < self.scaled_image.width) and (
+                        CROP_RECT_MULTIPLIER * new_multiplier_step * rect_ratio < self.scaled_image.height):
                     self.current_crop_rect_multiplier_step = new_multiplier_step
 
             if event.num == 5 or event.delta == 120:
@@ -316,6 +321,13 @@ class Application(tk.Tk):
         if not self.output_path_entry.get_value():
             messagebox.showerror(title='Error', message='No output path given.')
             return
+        if self.input_files is None:
+            messagebox.showerror(title='Error', message='No input images.')
+            return
+        elif len(self.input_files) == 0:
+            messagebox.showerror(title='Error', message='No input images.')
+            return
+
         # take coordinates and crop
 
         # roll or not
@@ -324,15 +336,14 @@ class Application(tk.Tk):
             if self.files_listbox.get_list_length() == 0:
                 return
 
-            index = self.files_listbox.get_widget().curselection()
-            if index:
-                index = int(self.files_listbox.get_widget().curselection()[0]) + 1
-                if index == self.files_listbox.get_list_length():
+            if self.current_image_index is not None:
+                self.current_image_index = self.current_image_index + 1
+                if self.current_image_index == self.files_listbox.get_list_length():
                     messagebox.showwarning(title='Warning', message='Image list reached to end, rolling back to zero.')
-                    index = 0
+                    self.current_image_index = 0
 
                 self.files_listbox.get_widget().selection_clear(0, tk.END)
-                self.files_listbox.get_widget().select_set(index)
+                self.files_listbox.get_widget().select_set(self.current_image_index)
                 self.files_listbox.get_widget().event_generate("<<ListboxSelect>>")
 
                 # self.current_image_index = index
