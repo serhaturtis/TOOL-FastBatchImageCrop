@@ -244,6 +244,30 @@ class LabelEntryFloat(tk.LabelFrame):
     def set_value(self, value):
         self.text_variable.set(str(value))
 
+class SingleLineConsole(tk.Frame):
+    console_label = None
+    console_stringvar = None
+    
+    def __init__(self, master=None):
+        super().__init__()
+        tk.Frame.__init__(self, master)
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        
+        self.init_ui()
+        
+    def init_ui(self):
+        self.console_stringvar = tk.StringVar()
+        self.console_label = tk.Label(self, textvariable=self.console_stringvar, bg='black', fg='green')
+        self.console_label.pack(expand=True, fill=tk.BOTH)
+        
+    def write_info(self, text):
+        self.console_stringvar.set('INFO: ' + text)
+    
+    def write_error(self, text):
+        self.console_stringvar.set('ERROR: ' + text)
+        
+        
 
 class Console(tk.LabelFrame):
     console_listbox = None
@@ -268,11 +292,11 @@ class Console(tk.LabelFrame):
 
     def write_info(self, text):
         self.console_listbox.insert(tk.END, 'INFO: ' + text)
-        self.console_listbox.yview_moveto(1)
+        self.console_listbox.yview(tk.END)
 
     def write_error(self, text):
         self.console_listbox.insert(tk.END, 'ERROR: ' + text)
-        self.console_listbox.yview_moveto(1)
+        self.console_listbox.yview(tk.END)
 
 
 class ListboxWithControls(tk.Frame):

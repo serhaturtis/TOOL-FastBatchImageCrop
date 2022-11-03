@@ -62,23 +62,20 @@ class Application(tk.Tk):
 
     def __init__(self, geometry):
         super().__init__()
-        self.console = ui.Console()
         self.geometry(geometry)
         self.init_data()
         self.init_ui()
+        self.console.write_info('Application init complete.')
 
     def init_data(self):
-        self.console.write_info('Init data complete.')
+        return
 
     def init_ui(self):
         self.last_configure_time = time.time()
         self.title('Fast Batch Image Crop')
         self.columnconfigure(0, weight=1)
-        self.rowconfigure(0, weight=7)
-        self.rowconfigure(1, weight=1)
-
-        # console
-        self.console.grid(column=0, row=1, sticky='news')
+        self.rowconfigure(0, weight=1)
+        #self.rowconfigure(1, weight=1)
 
         main_frame = tk.Frame(self)
         main_frame.grid(row=0, column=0, sticky='news')
@@ -86,6 +83,10 @@ class Application(tk.Tk):
         main_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
         main_frame.columnconfigure(2, weight=6)
+        
+        # console
+        self.console = ui.SingleLineConsole(self)
+        self.console.grid(column=0, row=1, sticky='news')
 
         # left frame
         left_frame = tk.Frame(main_frame)
@@ -167,6 +168,7 @@ class Application(tk.Tk):
 
         self.bind("<Configure>", self.window_configure_callback)
         self.console.write_info('UI init done.')
+        
 
     def scale_output_checkbox_callback(self, value):
         if value == 1:
