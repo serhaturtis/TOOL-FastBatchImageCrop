@@ -5,8 +5,12 @@ def load_image(path):
     return Image.open(path)
 
 
-def crop_image():
-    return 1
+def crop_image(image: Image, scale_ratio, box):
+    scaled_box = (int(box[0]/scale_ratio), int(box[1]/scale_ratio), int(box[2]/scale_ratio), int(box[3]/scale_ratio))
+    print(scaled_box)
+    cropped_image = image.crop(scaled_box)
+    print(cropped_image)
+    return image.crop(scaled_box)
 
 
 def resize_image(image: Image, width=None, height=None):

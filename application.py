@@ -47,10 +47,10 @@ class Application(tk.Tk):
     current_canvas_size_y = None
     current_mouse_x = None
     current_mouse_y = None
-    current_rectangle_tx = None
-    current_rectangle_ty = None
-    current_rectangle_bx = None
-    current_rectangle_by = None
+    current_rect_left = None
+    current_rect_upper = None
+    current_rect_right = None
+    current_rect_lower = None
     input_files = None
     raw_image = None
     scaled_image = None
@@ -204,33 +204,39 @@ class Application(tk.Tk):
 
             # x axis
             if self.current_mouse_x < canvas_half_x - image_half_x + rect_half_x:
-                self.current_rectangle_tx = canvas_half_x - image_half_x
-                self.current_rectangle_bx = canvas_half_x - image_half_x + rect_half_x * 2
+                self.current_rect_left = canvas_half_x - image_half_x
+                self.current_rect_right = canvas_half_x - image_half_x + rect_half_x * 2
             elif self.current_mouse_x + rect_half_x > canvas_half_x + image_half_x:
-                self.current_rectangle_tx = canvas_half_x + image_half_x - rect_half_x * 2
-                self.current_rectangle_bx = canvas_half_x + image_half_x
+                self.current_rect_left = canvas_half_x + image_half_x - rect_half_x * 2
+                self.current_rect_right = canvas_half_x + image_half_x
             else:
-                self.current_rectangle_tx = self.current_mouse_x - rect_half_x
-                self.current_rectangle_bx = self.current_mouse_x + rect_half_x
+                self.current_rect_left = self.current_mouse_x - rect_half_x
+                self.current_rect_right = self.current_mouse_x + rect_half_x
 
             # y axis
             if self.current_mouse_y < canvas_half_y - image_half_y + rect_half_y:
-                self.current_rectangle_ty = canvas_half_y - image_half_y
-                self.current_rectangle_by = canvas_half_y - image_half_y + rect_half_y * 2
+                self.current_rect_upper = canvas_half_y - image_half_y
+                self.current_rect_lower = canvas_half_y - image_half_y + rect_half_y * 2
             elif self.current_mouse_y + rect_half_y > canvas_half_y + image_half_y:
-                self.current_rectangle_ty = canvas_half_y + image_half_y - rect_half_y * 2
-                self.current_rectangle_by = canvas_half_y + image_half_y
+                self.current_rect_upper = canvas_half_y + image_half_y - rect_half_y * 2
+                self.current_rect_lower = canvas_half_y + image_half_y
             else:
-                self.current_rectangle_ty = self.current_mouse_y - rect_half_y
-                self.current_rectangle_by = self.current_mouse_y + rect_half_y
+                self.current_rect_upper = self.current_mouse_y - rect_half_y
+                self.current_rect_lower = self.current_mouse_y + rect_half_y
         else:
-            self.current_rectangle_tx = self.current_mouse_x - rect_half_x
-            self.current_rectangle_bx = self.current_mouse_x + rect_half_x
-            self.current_rectangle_ty = self.current_mouse_y - rect_half_y
-            self.current_rectangle_by = self.current_mouse_y + rect_half_y
+            self.current_rect_left = self.current_mouse_x - rect_half_x
+            self.current_rect_right = self.current_mouse_x + rect_half_x
+            self.current_rect_upper = self.current_mouse_y - rect_half_y
+            self.current_rect_lower = self.current_mouse_y + rect_half_y
+            
+        # set coords to int
+        self.current_rect_left = int(self.current_rect_left)
+        self.current_rect_upper = int(self.current_rect_upper)
+        self.current_rect_right = int(self.current_rect_right)
+        self.current_rect_lower = int(self.current_rect_lower)
 
-        self.image_canvas.coords(self.rectangle_container, self.current_rectangle_tx, self.current_rectangle_ty,
-                                 self.current_rectangle_bx, self.current_rectangle_by)
+        self.image_canvas.coords(self.rectangle_container, self.current_rect_left, self.current_rect_upper,
+                                 self.current_rect_right, self.current_rect_lower)
 
         self.image_canvas.update()
 
@@ -317,9 +323,12 @@ class Application(tk.Tk):
         self.draw_rectangle()
         
     def get_image_inside_rectangle(self):
+        box_rel_tl_x = self.current_rect_left - ((self.current_canvas_size_x - self.scaled_image.width) / 2)
+        box_rel_tl_y = self.current_rect_upper - ((self.current_canvas_size_y - self.scaled_image.height) / 2)
+        box_rel_bl_x = box_rel_tl_x + (self.current_rect_right - self.current_rect_left)
+        box_rel_bl_y = box_rel_tl_y + (self.current_rect_lower - self.current_rect_upper)
         # get rect data and crop image
-        rect_image = None
-        return rect_image
+        return iops.crop_image(self.raw_image, self.ratio, (box_rel_tl_x, box_rel_tl_y, box_rel_bl_x, box_rel_bl_y))
 
     def canvas_mouseclick(self, event):
         # check output path given
@@ -334,11 +343,21 @@ class Application(tk.Tk):
             return
 
         # take coordinates and crop
-        rect_image = get_image_inside_rectangle()
+        cropped_image = self.get_image_inside_rectangle()
         if self.scale_output_checkbox.get_value() == 1:
-            rect_image = iops.resize_image(rect_image, height=self.output_height_entry.get_value(), width=self.output_width_entry.get_value())
+            cropped_image = iops.resize_image(cropped_image, height=self.output_height_entry.get_value(), width=self.output_width_entry.get_value())
+        
+        output_image_name = self.input_files[self.current_image_index][0].split('.')[0] + '_' + str(self.crop_count) + '.png'
+        # check output path
+        output_image_path = self.output_path_entry.get_value()
+        if fops.check_path_valid(output_image_path) == False:
+            output_image_path = self.input_path_entry.get_value() + '/' + output_image_path
             
-        fops.
+        output_image_file_path = output_image_path + '/' + output_image_name
+        
+        fops.save_image_to_file(cropped_image, filepath=output_image_file_path)
+        self.console.write_info('Image saved to: ' + output_image_file_path)
+        self.crop_count = self.crop_count + 1
 
         # roll or not
         if self.roll_on_crop_checkbox.get_value() == 1:
