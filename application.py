@@ -75,7 +75,6 @@ class Application(tk.Tk):
         self.title('Fast Batch Image Crop')
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
-        #self.rowconfigure(1, weight=1)
 
         main_frame = tk.Frame(self)
         main_frame.grid(row=0, column=0, sticky='news')
@@ -83,7 +82,7 @@ class Application(tk.Tk):
         main_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
         main_frame.columnconfigure(2, weight=6)
-        
+
         # console
         self.console = ui.SingleLineConsole(self)
         self.console.grid(column=0, row=1, sticky='news')
@@ -166,9 +165,9 @@ class Application(tk.Tk):
                                                                       self.crop_aspect_y_entry.get_value(),
                                                                       outline='white', width=3)
 
-        self.bind("<Configure>", self.window_configure_callback)
+        self.bind('<Configure>', self.window_configure_callback)
+        self.bind('<space>', self.roll)
         self.console.write_info('UI init done.')
-        
 
     def scale_output_checkbox_callback(self, value):
         if value == 1:
@@ -231,7 +230,7 @@ class Application(tk.Tk):
             self.current_rect_right = self.current_mouse_x + rect_half_x
             self.current_rect_upper = self.current_mouse_y - rect_half_y
             self.current_rect_lower = self.current_mouse_y + rect_half_y
-            
+
         # set coords to int
         self.current_rect_left = int(self.current_rect_left)
         self.current_rect_upper = int(self.current_rect_upper)
@@ -302,11 +301,13 @@ class Application(tk.Tk):
         self.bind_all("<MouseWheel>", self.canvas_mousewheel)
         self.bind_all("<Button-4>", self.canvas_mousewheel)
         self.bind_all("<Button-5>", self.canvas_mousewheel)
+        self.bind_all('r', self.toggle_roll)
 
     def unbind_mousewheel_to_canvas(self, event):
         self.unbind_all("<MouseWheel>")
         self.unbind_all("<Button-4>")
         self.unbind_all("<Button-5>")
+        self.unbind_all('r')
 
     def canvas_mousewheel(self, event):
         if self.current_image is not None:
@@ -324,7 +325,7 @@ class Application(tk.Tk):
                     self.current_crop_rect_multiplier_step = CROP_RECT_STEP_MIN
 
         self.draw_rectangle()
-        
+
     def get_image_inside_rectangle(self):
         box_rel_tl_x = self.current_rect_left - ((self.current_canvas_size_x - self.scaled_image.width) / 2)
         box_rel_tl_y = self.current_rect_upper - ((self.current_canvas_size_y - self.scaled_image.height) / 2)
@@ -332,6 +333,24 @@ class Application(tk.Tk):
         box_rel_bl_y = box_rel_tl_y + (self.current_rect_lower - self.current_rect_upper)
         # get rect data and crop image
         return iops.crop_image(self.raw_image, self.ratio, (box_rel_tl_x, box_rel_tl_y, box_rel_bl_x, box_rel_bl_y))
+
+    def toggle_roll(self, event):
+        self.roll_on_crop_checkbox.set_value(not self.roll_on_crop_checkbox.get_value())
+
+    def roll(self, event):
+        # roll
+        if self.files_listbox.get_list_length() == 0:
+            return
+
+        if self.current_image_index is not None:
+            self.current_image_index = self.current_image_index + 1
+            if self.current_image_index == self.files_listbox.get_list_length():
+                messagebox.showwarning(title='Warning', message='Image list reached to end, rolling back to zero.')
+                self.current_image_index = 0
+
+            self.files_listbox.get_widget().selection_clear(0, tk.END)
+            self.files_listbox.get_widget().select_set(self.current_image_index)
+            self.files_listbox.get_widget().event_generate("<<ListboxSelect>>")
 
     def canvas_mouseclick(self, event):
         # check output path given
@@ -347,39 +366,24 @@ class Application(tk.Tk):
 
         # take coordinates and crop
         cropped_image = self.get_image_inside_rectangle()
-        if self.scale_output_checkbox.get_value() == 1:
-            cropped_image = iops.resize_image(cropped_image, height=self.output_height_entry.get_value(), width=self.output_width_entry.get_value())
-        
-        output_image_name = self.input_files[self.current_image_index][0].split('.')[0] + '_' + str(self.crop_count) + '.png'
+        if self.scale_output_checkbox.get_value():
+            cropped_image = iops.resize_image(cropped_image, height=self.output_height_entry.get_value(),
+                                              width=self.output_width_entry.get_value())
+
+        output_image_name = self.input_files[self.current_image_index][0].split('.')[0] + '_' + str(
+            self.crop_count) + '.png'
         # check output path
         output_image_path = self.output_path_entry.get_value()
-        if fops.check_path_valid(output_image_path) == False:
+        if not fops.check_path_valid(output_image_path):
             output_image_path = self.input_path_entry.get_value() + '/' + output_image_path
-            
+
         output_image_file_path = output_image_path + '/' + output_image_name
-        
+
         fops.save_image_to_file(cropped_image, filepath=output_image_file_path)
         self.console.write_info('Image saved to: ' + output_image_file_path)
         self.crop_count = self.crop_count + 1
 
         # roll or not
-        if self.roll_on_crop_checkbox.get_value() == 1:
+        if self.roll_on_crop_checkbox.get_value():
             # roll
-            if self.files_listbox.get_list_length() == 0:
-                return
-
-            if self.current_image_index is not None:
-                self.current_image_index = self.current_image_index + 1
-                if self.current_image_index == self.files_listbox.get_list_length():
-                    messagebox.showwarning(title='Warning', message='Image list reached to end, rolling back to zero.')
-                    self.current_image_index = 0
-
-                self.files_listbox.get_widget().selection_clear(0, tk.END)
-                self.files_listbox.get_widget().select_set(self.current_image_index)
-                self.files_listbox.get_widget().event_generate("<<ListboxSelect>>")
-
-                # self.current_image_index = index
-                # self.load_image_raw()
-                # self.load_image_to_canvas()
-
-        print('Clicked')
+            self.roll(None)

@@ -23,7 +23,7 @@ def validate_float(p):
 
 
 class CheckBox(tk.Frame):
-    int_variable = None
+    bool_variable = None
     callback_function = None
     button = None
 
@@ -32,21 +32,21 @@ class CheckBox(tk.Frame):
         tk.Frame.__init__(self, master)
 
         self.callback_function = callback
-        self.int_variable = tk.IntVar()
+        self.bool_variable = tk.BooleanVar()
 
-        self.button = tk.Checkbutton(self, text=text, variable=self.int_variable, command=self.state_callback,
-                                     onvalue=1, offvalue=0)
+        self.button = tk.Checkbutton(self, text=text, variable=self.bool_variable, command=self.state_callback,
+                                     onvalue=True, offvalue=False)
         self.button.grid(column=0, row=0, sticky='news')
 
     def state_callback(self):
         if self.callback_function is not None:
             self.callback_function(self.get_value())
 
-    def get_value(self):
-        return self.int_variable.get()
+    def get_value(self) -> bool:
+        return self.bool_variable.get()
 
     def set_value(self, value):
-        self.int_variable.set(value)
+        self.bool_variable.set(value)
         if self.callback_function is not None:
             self.callback_function(self.get_value())
 
@@ -121,7 +121,7 @@ class LabelEntryFileBrowse(tk.LabelFrame):
 
     def get_value(self):
         return self.text_variable.get()
-        
+
     def set_value(self, value):
         self.text_variable.set(value)
         self.last_path = value
@@ -154,14 +154,15 @@ class LabelEntryFolderBrowse(tk.LabelFrame):
             initialpath = self.last_path
 
         path = tk.filedialog.askdirectory(initialdir=initialpath)
-        self.last_path = path
-        self.text_variable.set(path)
-        if self.callback_f is not None:
-            self.callback_f(self.last_path)
+        if path:
+            self.last_path = path
+            self.text_variable.set(path)
+            if self.callback_f is not None:
+                self.callback_f(self.last_path)
 
     def get_value(self):
         return self.text_variable.get()
-        
+
     def set_value(self, value):
         self.text_variable.set(value)
         self.last_path = value
@@ -244,30 +245,30 @@ class LabelEntryFloat(tk.LabelFrame):
     def set_value(self, value):
         self.text_variable.set(str(value))
 
+
 class SingleLineConsole(tk.Frame):
     console_label = None
     console_stringvar = None
-    
+
     def __init__(self, master=None):
         super().__init__()
         tk.Frame.__init__(self, master)
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
-        
+
         self.init_ui()
-        
+
     def init_ui(self):
         self.console_stringvar = tk.StringVar()
         self.console_label = tk.Label(self, textvariable=self.console_stringvar, bg='black', fg='green')
         self.console_label.pack(expand=True, fill=tk.BOTH)
-        
+
     def write_info(self, text):
         self.console_stringvar.set('INFO: ' + text)
-    
+
     def write_error(self, text):
         self.console_stringvar.set('ERROR: ' + text)
-        
-        
+
 
 class Console(tk.LabelFrame):
     console_listbox = None

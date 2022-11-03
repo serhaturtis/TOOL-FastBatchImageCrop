@@ -6,10 +6,8 @@ def load_image(path):
 
 
 def crop_image(image: Image, scale_ratio, box):
-    scaled_box = (int(box[0]/scale_ratio), int(box[1]/scale_ratio), int(box[2]/scale_ratio), int(box[3]/scale_ratio))
-    print(scaled_box)
-    cropped_image = image.crop(scaled_box)
-    print(cropped_image)
+    scaled_box = (
+    int(box[0] / scale_ratio), int(box[1] / scale_ratio), int(box[2] / scale_ratio), int(box[3] / scale_ratio))
     return image.crop(scaled_box)
 
 
@@ -21,6 +19,7 @@ def resize_image(image: Image, width=None, height=None):
     elif height is None and width is None:
         raise RuntimeError("At lease one of width and height must be present")
     return image.resize((width, height), Image.ANTIALIAS)
-    
+
+
 def scale_image(image: Image, ratio=None):
-    return image.resize((int(image.width*ratio), int(image.height*ratio)), Image.ANTIALIAS)
+    return image.resize((int(image.width * ratio), int(image.height * ratio)), Image.ANTIALIAS)
