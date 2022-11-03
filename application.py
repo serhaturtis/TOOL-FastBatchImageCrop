@@ -315,6 +315,11 @@ class Application(tk.Tk):
                     self.current_crop_rect_multiplier_step = CROP_RECT_STEP_MIN
 
         self.draw_rectangle()
+        
+    def get_image_inside_rectangle(self):
+        # get rect data and crop image
+        rect_image = None
+        return rect_image
 
     def canvas_mouseclick(self, event):
         # check output path given
@@ -329,6 +334,11 @@ class Application(tk.Tk):
             return
 
         # take coordinates and crop
+        rect_image = get_image_inside_rectangle()
+        if self.scale_output_checkbox.get_value() == 1:
+            rect_image = iops.resize_image(rect_image, height=self.output_height_entry.get_value(), width=self.output_width_entry.get_value())
+            
+        fops.
 
         # roll or not
         if self.roll_on_crop_checkbox.get_value() == 1:

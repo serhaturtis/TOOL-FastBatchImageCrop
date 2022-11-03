@@ -1,5 +1,7 @@
 import glob
 import os
+from PIL import Image
+
 
 def get_image_files(path):
     types = ('*.jpg', '*.JPG', '*.jpeg', '*.JPEG', '*.png', '*.PNG' '*.webp', '*.WEBP')
@@ -17,6 +19,10 @@ def get_image_files(path):
 
     return tuple(zip(filenames, filepaths))
 
+def save_image_to_file(image: Image, filepath=None)
+    create_folder(filepath)
+    
+    
 
 def create_folder(path):
     if not os.path.exists(path):

@@ -20,7 +20,3 @@ def resize_image(image: Image, width=None, height=None):
     
 def scale_image(image: Image, ratio=None):
     return image.resize((int(image.width*ratio), int(image.height*ratio)), Image.ANTIALIAS)
-    
-
-def save_image():
-    return 0
