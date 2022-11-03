@@ -177,6 +177,7 @@ class Application(tk.Tk):
             self.output_width_entry.disable()
 
     def set_files_to_listbox(self, path):
+        self.output_path_entry.set_value(path + '/out')
         self.image_canvas.delete('all')
         self.files_listbox.clear()
         self.input_files = fops.get_image_files(path)

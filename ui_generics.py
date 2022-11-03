@@ -121,6 +121,10 @@ class LabelEntryFileBrowse(tk.LabelFrame):
 
     def get_value(self):
         return self.text_variable.get()
+        
+    def set_value(self, value):
+        self.text_variable.set(value)
+        self.last_path = value
 
 
 class LabelEntryFolderBrowse(tk.LabelFrame):
@@ -157,6 +161,10 @@ class LabelEntryFolderBrowse(tk.LabelFrame):
 
     def get_value(self):
         return self.text_variable.get()
+        
+    def set_value(self, value):
+        self.text_variable.set(value)
+        self.last_path = value
 
 
 class LabelEntryText(tk.LabelFrame):
