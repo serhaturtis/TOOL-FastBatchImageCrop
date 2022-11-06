@@ -155,8 +155,8 @@ class Application(tk.Tk):
         self.image_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
 
         self.image_canvas.bind("<Motion>", self.canvas_mousemove)
-        self.image_canvas.bind('<Enter>', self.bind_mousewheel_to_canvas)
-        self.image_canvas.bind('<Leave>', self.unbind_mousewheel_to_canvas)
+        self.image_canvas.bind('<Enter>', self.bind_actions_to_canvas)
+        self.image_canvas.bind('<Leave>', self.unbind_actions_from_canvas)
         self.image_canvas.bind('<ButtonRelease-1>', self.canvas_mouseclick)
         self.image_canvas.configure(bg='black')
 
@@ -166,7 +166,6 @@ class Application(tk.Tk):
                                                                       outline='white', width=3)
 
         self.bind('<Configure>', self.window_configure_callback)
-        self.bind('<space>', self.roll)
         self.console.write_info('UI init done.')
 
     def scale_output_checkbox_callback(self, value):
@@ -252,6 +251,7 @@ class Application(tk.Tk):
             index = int(w.curselection()[0])
 
             self.current_image_index = index
+            self.image_canvas.focus_set()
             self.load_image_raw()
             self.load_image_to_canvas()
 
@@ -297,16 +297,19 @@ class Application(tk.Tk):
 
         self.last_configure_time = time.time()
 
-    def bind_mousewheel_to_canvas(self, event):
+    def bind_actions_to_canvas(self, event):
+        self.image_canvas.focus_set()
         self.bind_all("<MouseWheel>", self.canvas_mousewheel)
         self.bind_all("<Button-4>", self.canvas_mousewheel)
         self.bind_all("<Button-5>", self.canvas_mousewheel)
+        self.bind_all('<space>', self.roll)
         self.bind_all('r', self.toggle_roll)
 
-    def unbind_mousewheel_to_canvas(self, event):
+    def unbind_actions_from_canvas(self, event):
         self.unbind_all("<MouseWheel>")
         self.unbind_all("<Button-4>")
         self.unbind_all("<Button-5>")
+        self.unbind_all('<space>')
         self.unbind_all('r')
 
     def canvas_mousewheel(self, event):
