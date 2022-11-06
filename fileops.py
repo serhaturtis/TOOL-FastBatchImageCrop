@@ -25,7 +25,7 @@ def get_image_files(path):
 
 def save_image_to_file(image: Image, filepath=None):
     create_folder(os.path.dirname(os.path.abspath(filepath)))
-    image.save(filepath)
+    image.save(filepath, quality=100, optimize=True)
 
 
 def check_path_valid(path) -> bool:
