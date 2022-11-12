@@ -303,6 +303,8 @@ class Application(tk.Tk):
         self.bind_all("<Button-4>", self.canvas_mousewheel)
         self.bind_all("<Button-5>", self.canvas_mousewheel)
         self.bind_all('<space>', self.roll)
+        self.bind_all('<e>', self.rotate_image_cw)
+        self.bind_all('<q>', self.rotate_image_ccw)
         self.bind_all('r', self.toggle_roll)
 
     def unbind_actions_from_canvas(self, event):
@@ -310,6 +312,8 @@ class Application(tk.Tk):
         self.unbind_all("<Button-4>")
         self.unbind_all("<Button-5>")
         self.unbind_all('<space>')
+        self.unbind_all('<e>')
+        self.unbind_all('<q>')
         self.unbind_all('r')
 
     def canvas_mousewheel(self, event):
@@ -339,6 +343,15 @@ class Application(tk.Tk):
 
     def toggle_roll(self, event):
         self.roll_on_crop_checkbox.set_value(not self.roll_on_crop_checkbox.get_value())
+        
+        
+    def rotate_image_cw(self, event):
+        self.raw_image = iops.rotate_image(self.raw_image, 270)
+        self.load_image_to_canvas()
+        
+    def rotate_image_ccw(self, event):
+        self.raw_image = iops.rotate_image(self.raw_image, 90)
+        self.load_image_to_canvas()
 
     def roll(self, event):
         # roll
