@@ -15,7 +15,7 @@ Run with;
 
 >python main.py
 
-Select input folder, adjust rect size with mousewheel, click, repeat.
+Select input folder, adjust crop rectangle size with mousewheel, click, repeat.
 
 Shortcut keys when cursor is on canvas;
 
