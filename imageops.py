@@ -22,7 +22,7 @@ def resize_image(image: Image, width=None, height=None):
     
     
 def rotate_image(image, angle):
-        return image.rotate(angle, Image.BICUBIC)
+        return image.rotate(angle, Image.BICUBIC, expand=True)
 
 
 def scale_image(image: Image, ratio=None):
