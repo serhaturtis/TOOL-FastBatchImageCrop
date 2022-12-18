@@ -59,4 +59,4 @@ def check_path_valid(path) -> bool:
 
 def create_folder(path):
     if not os.path.exists(path):
-        os.mkdir(path)
+        os.makedirs(path)
