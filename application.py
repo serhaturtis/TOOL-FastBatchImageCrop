@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
+from tkinter.simpledialog import askstring
 import time
 
 import ui_generics as ui
@@ -33,6 +34,7 @@ class Application(tk.Tk):
     files_listbox = None
     scale_output_checkbox = None
     roll_on_crop_checkbox = None
+    ask_for_class_name_checkbox = None
 
     # image canvas
     image_canvas = None
@@ -131,9 +133,13 @@ class Application(tk.Tk):
         self.crop_aspect_y_entry = ui.LabelEntryInt('Crop Aspect Y', parameters_frame)
         self.crop_aspect_y_entry.grid(column=0, row=5, sticky='news')
         self.crop_aspect_y_entry.set_value(DEFAULT_ASPECT_Y)
+        
+        self.ask_for_class_name_checkbox = ui.CheckBox('Ask For Class Name', None, parameters_frame)
+        self.ask_for_class_name_checkbox.grid(column=0, row=6, sticky='news')
 
         self.scale_output_checkbox.set_value(0)
         self.roll_on_crop_checkbox.set_value(1)
+        self.ask_for_class_name_checkbox.set_value(0)
 
         # mid frame
         mid_frame = tk.Frame(main_frame)
@@ -380,6 +386,11 @@ class Application(tk.Tk):
             messagebox.showerror(title='Error', message='No input images.')
             return
 
+        class_name = ""
+	# if ask for class name checked
+        if self.ask_for_class_name_checkbox.get_value():
+            class_name = askstring('Class name', 'What is the class name?')
+
         # take coordinates and crop
         cropped_image = self.get_image_inside_rectangle()
         if self.scale_output_checkbox.get_value():
@@ -393,7 +404,11 @@ class Application(tk.Tk):
         if not fops.check_path_valid(output_image_path):
             output_image_path = self.input_path_entry.get_value() + '/' + output_image_path
 
-        output_image_file_path = output_image_path + '/' + output_image_name
+        if class_name != "":
+            output_image_file_path = output_image_path + '/' + class_name + '/' + output_image_name
+        else:
+            output_image_file_path = output_image_path + '/' + output_image_name
+        
 
         fops.save_image_to_file(cropped_image, filepath=output_image_file_path)
         self.console.write_info('Image saved to: ' + output_image_file_path)
