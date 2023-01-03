@@ -17,6 +17,8 @@ Run with;
 
 Select input folder, adjust crop rectangle size with mousewheel, click, repeat.
 
+There are options to enter class names and image descriptions per crop. Class name creates seperate directories to save in the output folder and image descriptions create txt files with the same names per image.
+
 Shortcut keys when cursor is on canvas;
 
     - q: Rotate image CCW
