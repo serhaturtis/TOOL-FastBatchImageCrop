@@ -27,6 +27,14 @@ def save_image_to_file(image: Image, filepath=None):
     create_folder(os.path.dirname(os.path.abspath(filepath)))
     image.save(filepath, quality=100, optimize=True)
 
+    
+def save_image_description_to_file(description=None, filepath=None):
+    if description is not None:
+        create_folder(os.path.dirname(os.path.abspath(filepath)))
+        text_file = open(filepath, "w")
+        n = text_file.write(description)
+        text_file.close()
+
 
 def check_path_valid(path) -> bool:
     try:

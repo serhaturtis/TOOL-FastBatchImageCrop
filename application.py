@@ -35,6 +35,7 @@ class Application(tk.Tk):
     scale_output_checkbox = None
     roll_on_crop_checkbox = None
     ask_for_class_name_checkbox = None
+    ask_for_image_description_checkbox = None
 
     # image canvas
     image_canvas = None
@@ -136,6 +137,9 @@ class Application(tk.Tk):
         
         self.ask_for_class_name_checkbox = ui.CheckBox('Ask For Class Name', None, parameters_frame)
         self.ask_for_class_name_checkbox.grid(column=0, row=6, sticky='news')
+        
+        self.ask_for_image_description_checkbox = ui.CheckBox('Ask For File Description', None, parameters_frame)
+        self.ask_for_image_description_checkbox.grid(column=0, row=7, sticky='news')
 
         self.scale_output_checkbox.set_value(0)
         self.roll_on_crop_checkbox.set_value(1)
@@ -350,7 +354,6 @@ class Application(tk.Tk):
     def toggle_roll(self, event):
         self.roll_on_crop_checkbox.set_value(not self.roll_on_crop_checkbox.get_value())
         
-        
     def rotate_image_cw(self, event):
         self.raw_image = iops.rotate_image(self.raw_image, 270)
         self.load_image_to_canvas()
@@ -390,6 +393,10 @@ class Application(tk.Tk):
 	# if ask for class name checked
         if self.ask_for_class_name_checkbox.get_value():
             class_name = askstring('Class name', 'What is the class name?')
+            
+        # if ask for image description checked
+        if self.ask_for_image_description_checkbox.get_value():
+            image_description = askstring('Image description', 'What is in the image?')
 
         # take coordinates and crop
         cropped_image = self.get_image_inside_rectangle()
@@ -399,18 +406,25 @@ class Application(tk.Tk):
 
         output_image_name = self.input_files[self.current_image_index][0].split('.')[0] + '_' + str(
             self.crop_count) + '.png'
+        output_image_description_name = self.input_files[self.current_image_index][0].split('.')[0] + '_' + str(
+            self.crop_count) + '.txt'
+
         # check output path
         output_image_path = self.output_path_entry.get_value()
         if not fops.check_path_valid(output_image_path):
             output_image_path = self.input_path_entry.get_value() + '/' + output_image_path
 
+        output_image_description_file_path = ""
         if class_name != "":
             output_image_file_path = output_image_path + '/' + class_name + '/' + output_image_name
+            output_image_description_file_path = output_image_path + '/' + class_name + '/' + output_image_description_name
         else:
             output_image_file_path = output_image_path + '/' + output_image_name
+            output_image_description_file_path = output_image_path + '/' + output_image_description_name
         
-
+	
         fops.save_image_to_file(cropped_image, filepath=output_image_file_path)
+        fops.save_image_description_to_file(image_description, filepath=output_image_description_file_path)
         self.console.write_info('Image saved to: ' + output_image_file_path)
         self.crop_count = self.crop_count + 1
 
