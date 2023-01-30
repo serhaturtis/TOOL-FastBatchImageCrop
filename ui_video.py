@@ -151,7 +151,6 @@ class VideoTab(tk.Frame):
         self.ask_for_image_description_checkbox.grid(column=0, row=6, sticky='news')
 
         self.scale_output_checkbox.set_value(0)
-        self.roll_on_crop_checkbox.set_value(1)
         self.ask_for_class_name_checkbox.set_value(0)
         
         # right frame
@@ -202,9 +201,9 @@ class VideoTab(tk.Frame):
                 messagebox.showerror(title='Error', message='Path not valid.')
                 return
             
-            target_fps = askinteger('FPS', 'What FPS to extract? (0 for video fps)')
             cap = cv2.VideoCapture(self.video_path)
             video_fps = round(cap.get(cv2.CAP_PROP_FPS))
+            target_fps = askinteger('FPS', 'What FPS to extract? (Video FPS: ' + str(video_fps) + ')')
             
             if target_fps == 0:
                 target_fps = video_fps
