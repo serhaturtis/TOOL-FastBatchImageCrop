@@ -99,6 +99,7 @@ class LabelEntryFileBrowse(tk.LabelFrame):
         super().__init__()
         tk.LabelFrame.__init__(self, master, text=label)
 
+        self.callback_f = callback
         self.text_variable = tk.StringVar()
         self.columnconfigure(0, weight=3)
         self.columnconfigure(1, weight=1)
@@ -128,6 +129,10 @@ class LabelEntryFileBrowse(tk.LabelFrame):
     def set_value(self, value):
         self.text_variable.set(value)
         self.last_path = value
+        
+    def clear(self):
+        self.text_variable.set('')
+        self.last_path = ''
 
 
 class LabelEntryFolderBrowse(tk.LabelFrame):
@@ -169,6 +174,10 @@ class LabelEntryFolderBrowse(tk.LabelFrame):
     def set_value(self, value):
         self.text_variable.set(value)
         self.last_path = value
+        
+    def clear(self):
+        self.text_variable.set('')
+        self.last_path = ''
 
 
 class LabelEntryText(tk.LabelFrame):
@@ -268,9 +277,11 @@ class SingleLineConsole(tk.Frame):
 
     def write_info(self, text):
         self.console_stringvar.set('INFO: ' + text)
+        self.update_idletasks()
 
     def write_error(self, text):
         self.console_stringvar.set('ERROR: ' + text)
+        self.update_idletasks()
 
 
 class Console(tk.LabelFrame):
@@ -297,10 +308,12 @@ class Console(tk.LabelFrame):
     def write_info(self, text):
         self.console_listbox.insert(tk.END, 'INFO: ' + text)
         self.console_listbox.yview(tk.END)
+        self.update_idletasks()
 
     def write_error(self, text):
         self.console_listbox.insert(tk.END, 'ERROR: ' + text)
         self.console_listbox.yview(tk.END)
+        self.update_idletasks()
 
 
 class ListboxWithControls(tk.Frame):

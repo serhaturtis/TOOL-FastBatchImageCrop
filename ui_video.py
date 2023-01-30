@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
+import os
+import cv2
+import time
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 from tkinter.simpledialog import askstring
+from tkinter.simpledialog import askinteger
 
 import fileops as fops
 import imageops as iops
@@ -26,6 +31,7 @@ class VideoTab(tk.Frame):
     console = None
     input_path_entry = None
     output_path_entry = None
+    extract_frames_button = None
     output_width_entry = None
     output_height_entry = None
     crop_aspect_x_entry = None
@@ -43,6 +49,7 @@ class VideoTab(tk.Frame):
     progress_bar = None
     
     # video vars
+    video_path = ''
     seeked = False
     playing = False
     total_frames = None
@@ -105,11 +112,14 @@ class VideoTab(tk.Frame):
         paths_frame.grid(column=0, row=0, sticky='news')
         paths_frame.columnconfigure(0, weight=1)
         
-        self.input_path_entry = ui.LabelEntryFileBrowse('Input File', paths_frame, None)
+        self.input_path_entry = ui.LabelEntryFileBrowse('Input File', paths_frame, self.video_file_selected)
         self.input_path_entry.grid(column=0, row=0, sticky='news')
 
         self.output_path_entry = ui.LabelEntryFolderBrowse('Output Folder', paths_frame, None)
         self.output_path_entry.grid(column=0, row=1, sticky='news')
+        
+        self.extract_frames_button = tk.Button(paths_frame, text='Extract Frames', command=self.extract_frames_callback)
+        self.extract_frames_button.grid(column=0, row=2, sticky='news')
         
         parameters_frame = tk.LabelFrame(left_widget_canvas, text='Parameters')
         parameters_frame.grid(column=0, row=1, sticky='news')
@@ -118,30 +128,27 @@ class VideoTab(tk.Frame):
         self.scale_output_checkbox = ui.CheckBox('Scale Output', self.scale_output_checkbox_callback, parameters_frame)
         self.scale_output_checkbox.grid(column=0, row=0, sticky='news')
 
-        self.roll_on_crop_checkbox = ui.CheckBox('Roll On Crop', None, parameters_frame)
-        self.roll_on_crop_checkbox.grid(column=0, row=1, sticky='news')
-
         self.output_width_entry = ui.LabelEntryInt('Output Width', parameters_frame)
-        self.output_width_entry.grid(column=0, row=2, sticky='news')
+        self.output_width_entry.grid(column=0, row=1, sticky='news')
         self.output_width_entry.set_value(DEFAULT_OUTPUT_WIDTH)
 
         self.output_height_entry = ui.LabelEntryInt('Output Width', parameters_frame)
-        self.output_height_entry.grid(column=0, row=3, sticky='news')
+        self.output_height_entry.grid(column=0, row=2, sticky='news')
         self.output_height_entry.set_value(DEFAULT_OUTPUT_HEIGHT)
 
         self.crop_aspect_x_entry = ui.LabelEntryInt('Crop Aspect X', parameters_frame)
-        self.crop_aspect_x_entry.grid(column=0, row=4, sticky='news')
+        self.crop_aspect_x_entry.grid(column=0, row=3, sticky='news')
         self.crop_aspect_x_entry.set_value(DEFAULT_ASPECT_X)
 
         self.crop_aspect_y_entry = ui.LabelEntryInt('Crop Aspect Y', parameters_frame)
-        self.crop_aspect_y_entry.grid(column=0, row=5, sticky='news')
+        self.crop_aspect_y_entry.grid(column=0, row=4, sticky='news')
         self.crop_aspect_y_entry.set_value(DEFAULT_ASPECT_Y)
         
         self.ask_for_class_name_checkbox = ui.CheckBox('Ask For Class Name', None, parameters_frame)
-        self.ask_for_class_name_checkbox.grid(column=0, row=6, sticky='news')
+        self.ask_for_class_name_checkbox.grid(column=0, row=5, sticky='news')
         
         self.ask_for_image_description_checkbox = ui.CheckBox('Ask For Image Description', None, parameters_frame)
-        self.ask_for_image_description_checkbox.grid(column=0, row=7, sticky='news')
+        self.ask_for_image_description_checkbox.grid(column=0, row=6, sticky='news')
 
         self.scale_output_checkbox.set_value(0)
         self.roll_on_crop_checkbox.set_value(1)
@@ -166,7 +173,7 @@ class VideoTab(tk.Frame):
         self.rectangle_container = self.image_canvas.create_rectangle(0, 0, self.crop_aspect_x_entry.get_value(),
                                                                       self.crop_aspect_y_entry.get_value(),
                                                                       outline='white', width=3)
-        
+
     def scale_output_checkbox_callback(self, value):
         if value == 1:
             self.output_height_entry.enable()
@@ -174,10 +181,50 @@ class VideoTab(tk.Frame):
         else:
             self.output_height_entry.disable()
             self.output_width_entry.disable()
+
+    def video_file_selected(self, path):
+        if not path.endswith(('.mp4', '.avi', '.webm')):
+            self.input_path_entry.clear()
+            messagebox.showerror(title='Error', message='Selected file is not supported.')
+            return
             
-    def video_file_selected(self):
+        self.video_path = path
+            
+    def extract_frames_callback(self):
+        if not self.input_path_entry.get_value():
+            messagebox.showerror(title='Error', message='No video file selected.')
+            return
         
+        initialpath = os.path.expanduser('~')
+        path = tk.filedialog.askdirectory(initialdir=initialpath)
+        if path:
+            if not fops.check_path_valid(path):
+                messagebox.showerror(title='Error', message='Path not valid.')
+                return
             
+            target_fps = askinteger('FPS', 'What FPS to extract? (0 for video fps)')
+            cap = cv2.VideoCapture(self.video_path)
+            video_fps = round(cap.get(cv2.CAP_PROP_FPS))
+            
+            if target_fps == 0:
+                target_fps = video_fps
+                
+            hop = round(video_fps / target_fps)
+            current_frame = 0
+            
+            while(True):
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                if current_frame % hop == 0:
+                    target_file = path + '/' + str(current_frame) + '.png'
+                    cv2.imwrite(target_file, frame)
+                    self.console.write_info('Extracted frame ' + str(current_frame) + '.')
+                current_frame += 1
+                    
+            cap.release()
+            self.console.write_info('Frame extraction complete.')
+
     def play_video(self):
         if self.cap is None:
             if not self.input_path_entry.get_value():
@@ -190,11 +237,17 @@ class VideoTab(tk.Frame):
     
     def stop_video(self):
         return
-            
+
     def pause_video(self):
         self.playing = False
         self.current_frame = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
-            
+
+    def space_button_callback(self):
+        if self.playing:
+            self.pause_video()
+        else:
+            self.play_video()
+
     def draw_rectangle(self):
         rect_aspect_ratio = self.crop_aspect_y_entry.get_value() / self.crop_aspect_x_entry.get_value()
         rect_half_x = self.current_crop_rect_multiplier_step * CROP_RECT_MULTIPLIER / 2
@@ -244,7 +297,7 @@ class VideoTab(tk.Frame):
                                  self.current_rect_right, self.current_rect_lower)
 
         self.image_canvas.update()
-            
+
     def canvas_mousemove(self, event):
         self.current_mouse_x = event.x
         self.current_mouse_y = event.y
@@ -252,21 +305,19 @@ class VideoTab(tk.Frame):
         self.current_canvas_size_y = self.image_canvas.winfo_height()
 
         self.draw_rectangle()
-        
+
     def bind_actions_to_canvas(self, event):
         self.image_canvas.focus_set()
         self.bind_all("<MouseWheel>", self.canvas_mousewheel)
         self.bind_all("<Button-4>", self.canvas_mousewheel)
         self.bind_all("<Button-5>", self.canvas_mousewheel)
-        self.bind_all('<space>', self.roll)
-        self.bind_all('r', self.toggle_roll)
-        
+        self.bind_all('<space>', self.space_button_callback)
+
     def unbind_actions_from_canvas(self, event):
         self.unbind_all("<MouseWheel>")
         self.unbind_all("<Button-4>")
         self.unbind_all("<Button-5>")
         self.unbind_all('<space>')
-        self.unbind_all('r')
 
     def canvas_mousewheel(self, event):
         if self.current_image is not None:
@@ -284,7 +335,7 @@ class VideoTab(tk.Frame):
                     self.current_crop_rect_multiplier_step = CROP_RECT_STEP_MIN
 
         self.draw_rectangle()
-        
+
     def canvas_mouseclick(self, event):
         # check output path given
         if not self.output_path_entry.get_value():
@@ -298,7 +349,7 @@ class VideoTab(tk.Frame):
             return
 
         class_name = ""
-	# if ask for class name checked
+        # if ask for class name checked
         if self.ask_for_class_name_checkbox.get_value():
             class_name = askstring('Class name', 'What is the class name?')
             
@@ -335,8 +386,3 @@ class VideoTab(tk.Frame):
         fops.save_image_description_to_file(image_description, filepath=output_image_description_file_path)
         self.console.write_info('Image saved to: ' + output_image_file_path)
         self.crop_count = self.crop_count + 1
-
-        # roll or not
-        if self.roll_on_crop_checkbox.get_value():
-            # roll
-            self.roll(None)
