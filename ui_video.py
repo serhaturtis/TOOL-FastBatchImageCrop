@@ -7,6 +7,7 @@ from tkinter import ttk
 from tkinter import messagebox
 from tkinter.simpledialog import askstring
 from tkinter.simpledialog import askinteger
+import numpy as np
 
 import fileops as fops
 import imageops as iops
@@ -41,7 +42,7 @@ class VideoTab(tk.Frame):
     ask_for_image_description_checkbox = None
     
     # buttons
-    seek_back_button = None
+    seek_backward_button = None
     play_button = None
     pause_button = None
     stop_button = None
@@ -50,10 +51,12 @@ class VideoTab(tk.Frame):
     
     # video vars
     video_path = ''
+    video_length = None
+    total_frames = None
+    video_fps = None
     seeked = False
     playing = False
-    total_frames = None
-    video_loaded = None
+    percentage = 0
     cap = None
 
     # image canvas
@@ -112,7 +115,7 @@ class VideoTab(tk.Frame):
         paths_frame.grid(column=0, row=0, sticky='news')
         paths_frame.columnconfigure(0, weight=1)
         
-        self.input_path_entry = ui.LabelEntryFileBrowse('Input File', paths_frame, self.video_file_selected)
+        self.input_path_entry = ui.LabelEntryFileBrowse('Input File', paths_frame, self.video_file_selected, [('WEBM', '*.webm'), ('MP4', '*.mp4'), ('AVI', '*.avi')])
         self.input_path_entry.grid(column=0, row=0, sticky='news')
 
         self.output_path_entry = ui.LabelEntryFolderBrowse('Output Folder', paths_frame, None)
@@ -158,8 +161,11 @@ class VideoTab(tk.Frame):
         image_frame.rowconfigure(0, weight=1)
         image_frame.columnconfigure(0, weight=1)
         image_frame.grid(column=1, row=0, sticky='news')
+        
+        canvas_container = tk.Frame(image_frame)
+        canvas_container.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        self.image_canvas = tk.Canvas(image_frame)
+        self.image_canvas = tk.Canvas(canvas_container)
         self.image_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
 
         self.image_canvas.bind("<Motion>", self.canvas_mousemove)
@@ -168,10 +174,124 @@ class VideoTab(tk.Frame):
         self.image_canvas.bind('<ButtonRelease-1>', self.canvas_mouseclick)
         self.image_canvas.configure(bg='black')
 
-        # self.image_container = self.image_canvas.create_image(0, 0, anchor=tk.CENTER, image=self.current_image)
         self.rectangle_container = self.image_canvas.create_rectangle(0, 0, self.crop_aspect_x_entry.get_value(),
                                                                       self.crop_aspect_y_entry.get_value(),
                                                                       outline='white', width=3)
+                                                                      
+        bottom_controls_container = tk.Frame(image_frame)
+        bottom_controls_container.pack(side=tk.BOTTOM, fill=tk.X, expand=0)
+        
+        self.seek_backward_button = tk.Button(bottom_controls_container, text='BACK', command=self.seek_backward_button_callback)
+        self.seek_backward_button.pack(side=tk.LEFT, fill=tk.Y)
+        
+        self.play_button = tk.Button(bottom_controls_container, text='PLAY', command=self.play_button_callback)
+        self.play_button.pack(side=tk.LEFT, fill=tk.Y)
+        
+        self.pause_button = tk.Button(bottom_controls_container, text='PAUSE', command=self.pause_button_callback)
+        self.pause_button.pack(side=tk.LEFT, fill=tk.Y)
+        
+        self.stop_button = tk.Button(bottom_controls_container, text='STOP', command=self.stop_button_callback)
+        self.stop_button.pack(side=tk.LEFT, fill=tk.Y)
+        
+        self.seek_forward_button = tk.Button(bottom_controls_container, text='FORW', command=self.seek_forward_button_callback)
+        self.seek_forward_button.pack(side=tk.LEFT, fill=tk.Y)
+        
+        self.progress_bar = ttk.Progressbar(bottom_controls_container, orient='horizontal', mode='determinate')
+        self.progress_bar.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        self.progress_bar.bind('<ButtonPress-1>', self.progress_bar_seek_callback)
+        
+    def seek_backward_button_callback(self):
+        if self.cap is None:
+            return
+
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(self.percentage - 5 / 100 * self.video_length))
+        
+    def play_button_callback(self):
+        if self.cap is None:
+            if not self.input_path_entry.get_value():
+                messagebox.showerror(title='Error', message='No video file selected.')
+                return
+            if not self.output_path_entry.get_value():
+                messagebox.showerror(title='Error', message='No output path given.')
+                return
+            self.cap = cv2.VideoCapture(self.input_path_entry.get_value())
+            self.video_length = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            
+        self.play_video()
+        
+    def pause_button_callback(self):
+        self.playing = False
+        
+    def stop_button_callback(self):
+        self.playing = False
+        self.cap.release()
+        self.cap = None
+        self.percentage = 0
+        self.progress_bar.config(value=0)
+        
+    def seek_forward_button_callback(self):
+        if self.cap is None:
+            return
+
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(self.percentage + 5 / 100 * self.video_length))
+        
+    def progress_bar_seek_callback(self):
+        if self.cap is None:
+            return
+
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(self.progress_bar.value / 100 * self.video_length))
+        
+    def play_video(self):
+        if self.cap is None:
+            return
+            
+        self.playing = True
+        
+        self.display_frame()
+        
+    def display_frame(self):
+        ret, frame = self.cap.read()
+
+        if not ret:
+            self.stop_video()
+            return
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = np.array(frame)
+
+        self.percentage = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES) / self.video_length * 100)
+        self.progress_bar.config(value=self.percentage)
+
+        self.raw_image = tk.PhotoImage(image=frame)
+        self.image_canvas.delete('all')
+        self.ratio = min(self.image_canvas.winfo_width() / self.raw_image.width,
+                         self.image_canvas.winfo_height() / self.raw_image.height)
+        self.scaled_image = iops.scale_image(self.raw_image, self.ratio)
+        self.current_image = ImageTk.PhotoImage(self.scaled_image)
+        
+        self.image_container = self.image_canvas.create_image(self.image_canvas.winfo_width() / 2,
+                                                              self.image_canvas.winfo_height() / 2, anchor=tk.CENTER,
+                                                              image=self.current_image)
+
+        rect_ratio = self.crop_aspect_y_entry.get_value() / self.crop_aspect_x_entry.get_value()
+        rect_x = self.current_crop_rect_multiplier_step * CROP_RECT_MULTIPLIER
+        rect_y = rect_x * rect_ratio
+        self.rectangle_container = self.image_canvas.create_rectangle(self.current_mouse_x, self.current_mouse_y,
+                                                                      rect_x,
+                                                                      rect_y,
+                                                                      outline='white', width=3)
+        self.draw_rectangle()
+
+        if self.running:
+            self.after(30, self.play_frame)
+        
+    
+    def stop_video(self):
+        return
+
+    def pause_video(self):
+        self.playing = False
+        self.current_frame = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
 
     def scale_output_checkbox_callback(self, value):
         if value == 1:
@@ -188,7 +308,7 @@ class VideoTab(tk.Frame):
             return
             
         self.video_path = path
-            
+
     def extract_frames_callback(self):
         if not self.input_path_entry.get_value():
             messagebox.showerror(title='Error', message='No video file selected.')
@@ -223,23 +343,6 @@ class VideoTab(tk.Frame):
                     
             cap.release()
             self.console.write_info('Frame extraction complete.')
-
-    def play_video(self):
-        if self.cap is None:
-            if not self.input_path_entry.get_value():
-                messagebox.showerror(title='Error', message='No video file selected.')
-                return
-            if not self.output_path_entry.get_value():
-                messagebox.showerror(title='Error', message='No output path given.')
-                return
-            self.cap = cv2.VideoCapture(self.video)
-    
-    def stop_video(self):
-        return
-
-    def pause_video(self):
-        self.playing = False
-        self.current_frame = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES))
 
     def space_button_callback(self):
         if self.playing:

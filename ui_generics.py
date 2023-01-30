@@ -94,12 +94,14 @@ class ScrollableListbox(tk.LabelFrame):
 class LabelEntryFileBrowse(tk.LabelFrame):
     text_variable = None
     last_path = ''
+    filetypes = None
 
-    def __init__(self, label, master=None, callback=None):
+    def __init__(self, label, master=None, callback=None, filetypes=None):
         super().__init__()
         tk.LabelFrame.__init__(self, master, text=label)
 
         self.callback_f = callback
+        self.filetypes = filetypes
         self.text_variable = tk.StringVar()
         self.columnconfigure(0, weight=3)
         self.columnconfigure(1, weight=1)
@@ -116,7 +118,7 @@ class LabelEntryFileBrowse(tk.LabelFrame):
         else:
             initialpath = self.last_path
 
-        path = tk.filedialog.askopenfilename(initialdir=initialpath)
+        path = tk.filedialog.askopenfilename(filetypes=self.filetypes, initialdir=initialpath)
         if path:
             self.last_path = path
             self.text_variable.set(path)
