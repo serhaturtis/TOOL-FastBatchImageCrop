@@ -242,8 +242,8 @@ class VideoTab(tk.Frame):
     def progress_bar_seek_callback(self, event):
         if self.cap is None:
             return
-
-        self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(self.progress_bar['value'] / 100 * self.video_length))
+        
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, int((self.progress_bar["maximum"] * event.x / self.progress_bar.winfo_width()) / 100 * self.video_length))
         self.percentage = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES) / self.video_length * 100)
         self.progress_bar.config(value=self.percentage)
         
@@ -471,10 +471,9 @@ class VideoTab(tk.Frame):
             cropped_image = iops.resize_image(cropped_image, height=self.output_height_entry.get_value(),
                                               width=self.output_width_entry.get_value())
 
-        output_image_name = self.input_path_entry.get_value().split('.')[0] + '_' + str(
-            self.crop_count) + '.png'
-        output_image_description_name = self.input_path_entry.get_value().split('.')[0] + '_' + str(
-            self.crop_count) + '.txt'
+        output_basefilename = os.path.basename(self.input_path_entry.get_value()).split('.')[0]
+        output_image_name = output_basefilename + '_' + str(self.crop_count) + '.png'
+        output_image_description_name = output_basefilename + '_' + str(self.crop_count) + '.txt'
 
         # check output path
         output_image_path = self.output_path_entry.get_value()
