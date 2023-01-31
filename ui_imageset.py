@@ -377,12 +377,13 @@ class ImagesetTab(tk.Frame):
             messagebox.showerror(title='Error', message='No input images.')
             return
 
-        class_name = ""
 	    # if ask for class name checked
+        class_name = None
         if self.ask_for_class_name_checkbox.get_value():
             class_name = askstring('Class name', 'What is the class name?')
             
         # if ask for image description checked
+        image_description = None
         if self.ask_for_image_description_checkbox.get_value():
             image_description = askstring('Image description', 'What is in the image?')
 
@@ -403,7 +404,7 @@ class ImagesetTab(tk.Frame):
             output_image_path = self.input_path_entry.get_value() + '/' + output_image_path
 
         output_image_description_file_path = ""
-        if class_name != "":
+        if class_name is not None:
             output_image_file_path = output_image_path + '/' + class_name + '/' + output_image_name
             output_image_description_file_path = output_image_path + '/' + class_name + '/' + output_image_description_name
         else:

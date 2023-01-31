@@ -118,7 +118,11 @@ class LabelEntryFileBrowse(tk.LabelFrame):
         else:
             initialpath = self.last_path
 
-        path = tk.filedialog.askopenfilename(filetypes=self.filetypes, initialdir=initialpath)
+        if self.filetypes:
+            path = tk.filedialog.askopenfilename(filetypes=self.filetypes, initialdir=initialpath)
+        else:
+            path = tk.filedialog.askopenfilename(initialdir=initialpath)
+        
         if path:
             self.last_path = path
             self.text_variable.set(path)

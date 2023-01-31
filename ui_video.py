@@ -7,7 +7,7 @@ from tkinter import ttk
 from tkinter import messagebox
 from tkinter.simpledialog import askstring
 from tkinter.simpledialog import askinteger
-import numpy as np
+from PIL import Image, ImageTk
 
 import fileops as fops
 import imageops as iops
@@ -115,7 +115,7 @@ class VideoTab(tk.Frame):
         paths_frame.grid(column=0, row=0, sticky='news')
         paths_frame.columnconfigure(0, weight=1)
         
-        self.input_path_entry = ui.LabelEntryFileBrowse('Input File', paths_frame, self.video_file_selected, [('WEBM', '*.webm'), ('MP4', '*.mp4'), ('AVI', '*.avi')])
+        self.input_path_entry = ui.LabelEntryFileBrowse('Input File', paths_frame, self.video_file_selected)
         self.input_path_entry.grid(column=0, row=0, sticky='news')
 
         self.output_path_entry = ui.LabelEntryFolderBrowse('Output Folder', paths_frame, None)
@@ -204,7 +204,9 @@ class VideoTab(tk.Frame):
         if self.cap is None:
             return
 
-        self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(self.percentage - 5 / 100 * self.video_length))
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(((self.percentage - 5) / 100) * self.video_length))
+        self.percentage = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES) / self.video_length * 100)
+        self.progress_bar.config(value=self.percentage)
         
     def play_button_callback(self):
         if self.cap is None:
@@ -233,13 +235,17 @@ class VideoTab(tk.Frame):
         if self.cap is None:
             return
 
-        self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(self.percentage + 5 / 100 * self.video_length))
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(((self.percentage + 5) / 100) * self.video_length))
+        self.percentage = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES) / self.video_length * 100)
+        self.progress_bar.config(value=self.percentage)
         
-    def progress_bar_seek_callback(self):
+    def progress_bar_seek_callback(self, event):
         if self.cap is None:
             return
 
-        self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(self.progress_bar.value / 100 * self.video_length))
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, int(self.progress_bar['value'] / 100 * self.video_length))
+        self.percentage = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES) / self.video_length * 100)
+        self.progress_bar.config(value=self.percentage)
         
     def play_video(self):
         if self.cap is None:
@@ -253,16 +259,15 @@ class VideoTab(tk.Frame):
         ret, frame = self.cap.read()
 
         if not ret:
-            self.stop_video()
+            self.stop_button_callback()
             return
-
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame = np.array(frame)
-
+            
         self.percentage = int(self.cap.get(cv2.CAP_PROP_POS_FRAMES) / self.video_length * 100)
         self.progress_bar.config(value=self.percentage)
 
-        self.raw_image = tk.PhotoImage(image=frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        self.raw_image = Image.fromarray(frame)
         self.image_canvas.delete('all')
         self.ratio = min(self.image_canvas.winfo_width() / self.raw_image.width,
                          self.image_canvas.winfo_height() / self.raw_image.height)
@@ -282,8 +287,8 @@ class VideoTab(tk.Frame):
                                                                       outline='white', width=3)
         self.draw_rectangle()
 
-        if self.running:
-            self.after(30, self.play_frame)
+        if self.playing:
+            self.after(1, self.display_frame)
         
     
     def stop_video(self):
@@ -344,7 +349,7 @@ class VideoTab(tk.Frame):
             cap.release()
             self.console.write_info('Frame extraction complete.')
 
-    def space_button_callback(self):
+    def space_button_callback(self, event):
         if self.playing:
             self.pause_video()
         else:
@@ -443,19 +448,20 @@ class VideoTab(tk.Frame):
         if not self.output_path_entry.get_value():
             messagebox.showerror(title='Error', message='No output path given.')
             return
-        if self.input_files is None:
-            messagebox.showerror(title='Error', message='No input images.')
+        
+        if self.cap is None:
+            messagebox.showerror(title='Error', message='No video.')
             return
-        elif len(self.input_files) == 0:
-            messagebox.showerror(title='Error', message='No input images.')
-            return
+            
+        self.pause_video()
 
-        class_name = ""
         # if ask for class name checked
+        class_name = None
         if self.ask_for_class_name_checkbox.get_value():
             class_name = askstring('Class name', 'What is the class name?')
             
         # if ask for image description checked
+        image_description = None
         if self.ask_for_image_description_checkbox.get_value():
             image_description = askstring('Image description', 'What is in the image?')
 
@@ -465,9 +471,9 @@ class VideoTab(tk.Frame):
             cropped_image = iops.resize_image(cropped_image, height=self.output_height_entry.get_value(),
                                               width=self.output_width_entry.get_value())
 
-        output_image_name = self.input_files[self.current_image_index][0].split('.')[0] + '_' + str(
+        output_image_name = self.input_path_entry.get_value().split('.')[0] + '_' + str(
             self.crop_count) + '.png'
-        output_image_description_name = self.input_files[self.current_image_index][0].split('.')[0] + '_' + str(
+        output_image_description_name = self.input_path_entry.get_value().split('.')[0] + '_' + str(
             self.crop_count) + '.txt'
 
         # check output path
@@ -476,7 +482,7 @@ class VideoTab(tk.Frame):
             output_image_path = self.input_path_entry.get_value() + '/' + output_image_path
 
         output_image_description_file_path = ""
-        if class_name != "":
+        if class_name is not None:
             output_image_file_path = output_image_path + '/' + class_name + '/' + output_image_name
             output_image_description_file_path = output_image_path + '/' + class_name + '/' + output_image_description_name
         else:
@@ -488,3 +494,11 @@ class VideoTab(tk.Frame):
         fops.save_image_description_to_file(image_description, filepath=output_image_description_file_path)
         self.console.write_info('Image saved to: ' + output_image_file_path)
         self.crop_count = self.crop_count + 1
+        
+    def get_image_inside_rectangle(self):
+        box_rel_tl_x = self.current_rect_left - ((self.current_canvas_size_x - self.scaled_image.width) / 2)
+        box_rel_tl_y = self.current_rect_upper - ((self.current_canvas_size_y - self.scaled_image.height) / 2)
+        box_rel_bl_x = box_rel_tl_x + (self.current_rect_right - self.current_rect_left)
+        box_rel_bl_y = box_rel_tl_y + (self.current_rect_lower - self.current_rect_upper)
+        # get rect data and crop image
+        return iops.crop_image(self.raw_image, self.ratio, (box_rel_tl_x, box_rel_tl_y, box_rel_bl_x, box_rel_bl_y))
