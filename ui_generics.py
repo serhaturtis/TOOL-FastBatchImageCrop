@@ -194,12 +194,19 @@ class LabelEntryText(tk.LabelFrame):
         tk.LabelFrame.__init__(self, master, text=label)
         self.text_variable = tk.StringVar()
         self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
 
         self.entry = tk.Entry(self, textvariable=self.text_variable)
         self.entry.grid(column=0, row=0, sticky='news')
 
     def get_value(self):
         return self.text_variable.get()
+
+    def set_value(self, text):
+        self.text_variable.set(text)
+
+    def clear(self):
+        self.text_variable.set('')
 
     def enable(self):
         self.entry.config(state='normal')

@@ -35,8 +35,11 @@ class ImagesetTab(tk.Frame):
     files_listbox = None
     scale_output_checkbox = None
     roll_on_crop_checkbox = None
-    ask_for_class_name_checkbox = None
-    ask_for_image_description_checkbox = None
+    use_class_name_checkbox = None
+    use_image_description_checkbox = None
+    class_name_entry = None
+    image_description_entry = None
+
 
     # image canvas
     image_canvas = None
@@ -128,15 +131,16 @@ class ImagesetTab(tk.Frame):
         self.crop_aspect_y_entry.grid(column=0, row=5, sticky='news')
         self.crop_aspect_y_entry.set_value(DEFAULT_ASPECT_Y)
         
-        self.ask_for_class_name_checkbox = ui.CheckBox('Ask For Class Name', None, parameters_frame)
-        self.ask_for_class_name_checkbox.grid(column=0, row=6, sticky='news')
+        self.use_class_name_checkbox = ui.CheckBox('Use Class Name', None, parameters_frame)
+        self.use_class_name_checkbox.grid(column=0, row=6, sticky='news')
         
-        self.ask_for_image_description_checkbox = ui.CheckBox('Ask For Image Description', None, parameters_frame)
-        self.ask_for_image_description_checkbox.grid(column=0, row=7, sticky='news')
+        self.use_image_description_checkbox = ui.CheckBox('Use Image Description', None, parameters_frame)
+        self.use_image_description_checkbox.grid(column=0, row=7, sticky='news')
 
         self.scale_output_checkbox.set_value(0)
         self.roll_on_crop_checkbox.set_value(1)
-        self.ask_for_class_name_checkbox.set_value(0)
+        self.use_class_name_checkbox.set_value(0)
+        self.use_image_description_checkbox.set_value(0)
 
         # mid frame
         mid_frame = tk.Frame(main_frame)
@@ -155,13 +159,19 @@ class ImagesetTab(tk.Frame):
         image_frame.grid(column=2, row=0, sticky='news')
 
         self.image_canvas = tk.Canvas(image_frame)
-        self.image_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        self.image_canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
         self.image_canvas.bind("<Motion>", self.canvas_mousemove)
         self.image_canvas.bind('<Enter>', self.bind_actions_to_canvas)
         self.image_canvas.bind('<Leave>', self.unbind_actions_from_canvas)
         self.image_canvas.bind('<ButtonRelease-1>', self.canvas_mouseclick)
         self.image_canvas.configure(bg='black')
+
+        self.image_description_entry = ui.LabelEntryText('Image Description', image_frame)
+        self.image_description_entry.pack(side=tk.BOTTOM, fill=tk.X)
+
+        self.class_name_entry = ui.LabelEntryText('Class Name', image_frame)
+        self.class_name_entry.pack(side=tk.BOTTOM, fill=tk.X)
 
         # self.image_container = self.image_canvas.create_image(0, 0, anchor=tk.CENTER, image=self.current_image)
         self.rectangle_container = self.image_canvas.create_rectangle(0, 0, self.crop_aspect_x_entry.get_value(),
@@ -379,13 +389,15 @@ class ImagesetTab(tk.Frame):
 
 	    # if ask for class name checked
         class_name = None
-        if self.ask_for_class_name_checkbox.get_value():
-            class_name = askstring('Class name', 'What is the class name?')
+        if self.use_class_name_checkbox.get_value():
+            #class_name = askstring('Class name', 'What is the class name?')
+            class_name = self.class_name_entry.get_value()
             
         # if ask for image description checked
         image_description = None
-        if self.ask_for_image_description_checkbox.get_value():
-            image_description = askstring('Image description', 'What is in the image?')
+        if self.use_image_description_checkbox.get_value():
+            #image_description = askstring('Image description', 'What is in the image?')
+            image_description = self.image_description_entry.get_value()
 
         # take coordinates and crop
         cropped_image = self.get_image_inside_rectangle()
@@ -419,5 +431,7 @@ class ImagesetTab(tk.Frame):
 
         # roll or not
         if self.roll_on_crop_checkbox.get_value():
+            # clear image description entry
+            self.image_description_entry.clear()
             # roll
             self.roll(None)
