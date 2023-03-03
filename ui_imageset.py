@@ -52,8 +52,8 @@ class ImagesetTab(tk.Frame):
     current_scaled_image = None
     current_canvas_size_x = None
     current_canvas_size_y = None
-    current_mouse_x = None
-    current_mouse_y = None
+    current_mouse_x = 0
+    current_mouse_y = 0
     current_rect_left = None
     current_rect_upper = None
     current_rect_right = None
@@ -82,9 +82,9 @@ class ImagesetTab(tk.Frame):
         main_frame = tk.Frame(self)
         main_frame.grid(row=0, column=0, sticky='news')
         main_frame.rowconfigure(0, weight=1)
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=1)
-        main_frame.columnconfigure(2, weight=6)
+        main_frame.columnconfigure(0, weight=2, uniform='x')
+        main_frame.columnconfigure(1, weight=2, uniform='x')
+        main_frame.columnconfigure(2, weight=8, uniform='x')
 
         # left frame
         left_frame = tk.Frame(main_frame)
@@ -161,9 +161,9 @@ class ImagesetTab(tk.Frame):
         self.image_canvas = tk.Canvas(image_frame)
         self.image_canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        self.image_canvas.bind("<Motion>", self.canvas_mousemove)
-        self.image_canvas.bind('<Enter>', self.bind_actions_to_canvas)
-        self.image_canvas.bind('<Leave>', self.unbind_actions_from_canvas)
+        self.image_canvas.bind("<Motion>", self.on_canvas_motion)
+        self.image_canvas.bind('<Enter>', self.on_canvas_enter)
+        self.image_canvas.bind('<Leave>', self.on_canvas_leave)
         self.image_canvas.bind('<ButtonRelease-1>', self.canvas_mouseclick)
         self.image_canvas.configure(bg='black')
 
@@ -174,7 +174,7 @@ class ImagesetTab(tk.Frame):
         self.class_name_entry.pack(side=tk.BOTTOM, fill=tk.X)
 
         # self.image_container = self.image_canvas.create_image(0, 0, anchor=tk.CENTER, image=self.current_image)
-        self.rectangle_container = self.image_canvas.create_rectangle(0, 0, self.crop_aspect_x_entry.get_value(),
+        self.rectangle_container = self.image_canvas.create_rectangle(self.current_mouse_x, self.current_mouse_y, self.crop_aspect_x_entry.get_value(),
                                                                       self.crop_aspect_y_entry.get_value(),
                                                                       outline='white', width=3)
     
@@ -206,7 +206,7 @@ class ImagesetTab(tk.Frame):
 
         self.console.write_info('Found ' + str(len(self.input_files)) + ' image(s).')
 
-    def draw_rectangle(self):
+    def move_rectangle(self):
         rect_aspect_ratio = self.crop_aspect_y_entry.get_value() / self.crop_aspect_x_entry.get_value()
         rect_half_x = self.current_crop_rect_multiplier_step * CROP_RECT_MULTIPLIER / 2
         rect_half_y = int(rect_half_x * rect_aspect_ratio)
@@ -291,21 +291,22 @@ class ImagesetTab(tk.Frame):
         rect_ratio = self.crop_aspect_y_entry.get_value() / self.crop_aspect_x_entry.get_value()
         rect_x = self.current_crop_rect_multiplier_step * CROP_RECT_MULTIPLIER
         rect_y = rect_x * rect_ratio
-        self.rectangle_container = self.image_canvas.create_rectangle(self.current_mouse_x, self.current_mouse_y,
-                                                                      rect_x,
-                                                                      rect_y,
+        self.rectangle_container = self.image_canvas.create_rectangle(self.current_mouse_x - rect_x/2, 
+                                                                      self.current_mouse_y - rect_y/2,
+                                                                      self.current_mouse_x + rect_x/2,
+                                                                      self.current_mouse_y + rect_y/2,
                                                                       outline='white', width=3)
-        self.draw_rectangle()
+        self.move_rectangle()
 
-    def canvas_mousemove(self, event):
+    def on_canvas_motion(self, event):
         self.current_mouse_x = event.x
         self.current_mouse_y = event.y
         self.current_canvas_size_x = self.image_canvas.winfo_width()
         self.current_canvas_size_y = self.image_canvas.winfo_height()
 
-        self.draw_rectangle()
+        self.move_rectangle()
 
-    def bind_actions_to_canvas(self, event):
+    def on_canvas_enter(self, event):
         self.image_canvas.focus_set()
         self.bind_all("<MouseWheel>", self.canvas_mousewheel)
         self.bind_all("<Button-4>", self.canvas_mousewheel)
@@ -315,7 +316,7 @@ class ImagesetTab(tk.Frame):
         self.bind_all('<q>', self.rotate_image_ccw)
         self.bind_all('r', self.toggle_roll)
 
-    def unbind_actions_from_canvas(self, event):
+    def on_canvas_leave(self, event):
         self.unbind_all("<MouseWheel>")
         self.unbind_all("<Button-4>")
         self.unbind_all("<Button-5>")
@@ -339,7 +340,7 @@ class ImagesetTab(tk.Frame):
                 if self.current_crop_rect_multiplier_step < CROP_RECT_STEP_MIN:
                     self.current_crop_rect_multiplier_step = CROP_RECT_STEP_MIN
 
-        self.draw_rectangle()
+        self.move_rectangle()
 
     def get_image_inside_rectangle(self):
         box_rel_tl_x = self.current_rect_left - ((self.current_canvas_size_x - self.scaled_image.width) / 2)
@@ -405,10 +406,8 @@ class ImagesetTab(tk.Frame):
             cropped_image = iops.resize_image(cropped_image, height=self.output_height_entry.get_value(),
                                               width=self.output_width_entry.get_value())
 
-        output_image_name = self.input_files[self.current_image_index][0].split('.')[0] + '_' + str(
-            self.crop_count) + '.png'
-        output_image_description_name = self.input_files[self.current_image_index][0].split('.')[0] + '_' + str(
-            self.crop_count) + '.txt'
+        output_image_name = self.input_files[self.current_image_index][0].split('.')[0] + '_' + str(self.crop_count) + '.png'
+        output_image_description_name = self.input_files[self.current_image_index][0].split('.')[0] + '_' + str(self.crop_count) + '.txt'
 
         # check output path
         output_image_path = self.output_path_entry.get_value()

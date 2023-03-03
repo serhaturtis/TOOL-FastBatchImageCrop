@@ -2,6 +2,7 @@ import glob
 import os
 import sys
 import errno
+import json
 from PIL import Image
 
 ERROR_INVALID_NAME = 123
@@ -34,6 +35,22 @@ def save_image_description_to_file(description=None, filepath=None):
         text_file = open(filepath, "w")
         n = text_file.write(description)
         text_file.close()
+
+def load_tag_data(filename):
+    tag_data = None
+    tag_data_filename = filename+'.tagdata'
+    if os.path.exists(tag_data_filename):
+        with open(tag_data_filename, "r") as f:
+            data = f.read()
+            tag_data = json.loads(data)
+
+    return tag_data
+
+def save_tag_data(filename, tag_data):
+    tagdata_filename = filename+'.tagdata'
+    with open(tagdata_filename, "w") as f:
+        json_str = json.dumps(tag_data, sort_keys=False, indent=4)
+        f.write(json_str)
 
 
 def check_path_valid(path) -> bool:
