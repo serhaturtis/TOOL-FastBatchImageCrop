@@ -13,7 +13,7 @@ from PIL import ImageTk
 TAG_RECT_SIZE = 16
 
 TAGDATA_TEMPLATE = {
-    'class': '',
+    'class_name': '',
     'tags': []
 }
 
@@ -102,7 +102,7 @@ class TagEditorTab(tk.Frame):
         self.image_canvas = tk.Canvas(image_frame)
         self.image_canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        self.image_canvas.bind('<Motion>', self.canvas_mousemove)
+        self.image_canvas.bind('<Motion>', self.on_canvas_motion)
         self.image_canvas.bind('<Enter>', self.on_canvas_enter)
         self.image_canvas.bind('<Leave>', self.on_canvas_leave)
         self.image_canvas.bind('<ButtonRelease-1>', self.canvas_mouseclick)
@@ -153,7 +153,7 @@ class TagEditorTab(tk.Frame):
         print(tag_data)
         if tag_data is not None:
             self.current_tag_data = tag_data
-            self.class_name_entry.set_value(self.current_tag_data['class'])
+            self.class_name_entry.set_value(self.current_tag_data['class_name'])
             tags = self.current_tag_data['tags']
 
             tags_string = ''
@@ -161,10 +161,18 @@ class TagEditorTab(tk.Frame):
                 self.image_canvas.delete(rect)
 
             self.tag_rectangles.clear()
+            
+            scl_img_width, scl_img_height = self.scaled_image.size
+            raw_img_width, raw_img_height = self.raw_image.size
+            scaling_factor = raw_img_width / scl_img_width
+
+            x_offset = int((self.image_canvas.winfo_width() - scl_img_width) / 2)
+            y_offset = int((self.image_canvas.winfo_height() - scl_img_height) / 2)
+
             for tag in tags:
-                pass
-                coord_x = 0
-                coord_y = 0
+                coord_x = int((tag['x'] /scaling_factor) + x_offset)
+                coord_y = int((tag['y'] /scaling_factor) + y_offset)
+
                 self.tag_rectangles.append(self.image_canvas.create_rectangle(coord_x - TAG_RECT_SIZE/2, 
                                                                       coord_y - TAG_RECT_SIZE/2,
                                                                       coord_x + TAG_RECT_SIZE/2,
@@ -249,7 +257,7 @@ class TagEditorTab(tk.Frame):
 
         self.image_canvas.update()
 
-    def canvas_mousemove(self, event):
+    def on_canvas_motion(self, event):
         self.current_mouse_x = event.x
         self.current_mouse_y = event.y
         self.current_canvas_size_x = self.image_canvas.winfo_width()
@@ -282,7 +290,7 @@ class TagEditorTab(tk.Frame):
     def canvas_mouseclick(self, event):
         if self.input_files is None:
             messagebox.showerror(title='Error', message='No input images.')
-            return
+            return 
         elif len(self.input_files) == 0:
             messagebox.showerror(title='Error', message='No input images.')
             return
@@ -313,8 +321,10 @@ class TagEditorTab(tk.Frame):
             new_tag['y'] = orig_y
             new_tag['tag'] = tag
             self.current_tag_data['tags'].append(new_tag)
+        else:
+            return
 
-        self.current_tag_data['class'] = self.class_name_entry.get_value()
+        self.current_tag_data['class_name'] = self.class_name_entry.get_value()
 
         fops.save_tag_data(self.input_files[self.current_image_index][1].split('.')[0], self.current_tag_data)
         self.files_listbox.get_widget().event_generate('<<ListboxSelect>>')

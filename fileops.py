@@ -48,9 +48,17 @@ def load_tag_data(filename):
 
 def save_tag_data(filename, tag_data):
     tagdata_filename = filename+'.tagdata'
+    keywords_filename = filename+'.txt'
     with open(tagdata_filename, "w") as f:
         json_str = json.dumps(tag_data, sort_keys=False, indent=4)
         f.write(json_str)
+
+    with open(keywords_filename, 'w') as f:
+        keywords_string = tag_data['class_name']
+        for tag in tag_data['tags']:
+            keywords_string += ', {tag}'.format(tag=tag['tag'])
+        
+        f.write(keywords_string)
 
 
 def check_path_valid(path) -> bool:
