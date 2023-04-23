@@ -2,6 +2,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from tkinter.simpledialog import askstring
+import math
 
 import fileops as fops
 import imageops as iops
@@ -37,6 +38,7 @@ class ImagesetTab(tk.Frame):
     roll_on_crop_checkbox = None
     use_class_name_checkbox = None
     use_image_description_checkbox = None
+    ask_for_classes_checkbox = None
     class_name_entry = None
     image_description_entry = None
 
@@ -137,10 +139,14 @@ class ImagesetTab(tk.Frame):
         self.use_image_description_checkbox = ui.CheckBox('Use Image Description', None, parameters_frame)
         self.use_image_description_checkbox.grid(column=0, row=7, sticky='news')
 
+        self.ask_for_classes_checkbox = ui.CheckBox('Ask Classes (classes.txt)', None, parameters_frame)
+        self.ask_for_classes_checkbox.grid(column=0, row=8, sticky='news')
+
         self.scale_output_checkbox.set_value(0)
         self.roll_on_crop_checkbox.set_value(1)
         self.use_class_name_checkbox.set_value(0)
         self.use_image_description_checkbox.set_value(0)
+        self.ask_for_classes_checkbox.set_value(0)
 
         # mid frame
         mid_frame = tk.Frame(main_frame)
@@ -393,6 +399,14 @@ class ImagesetTab(tk.Frame):
         if self.use_class_name_checkbox.get_value():
             #class_name = askstring('Class name', 'What is the class name?')
             class_name = self.class_name_entry.get_value()
+        elif self.ask_for_classes_checkbox.get_value():
+            items = []
+            with open('classes.txt', 'r') as file:
+                content = file.read()
+                items = [item.strip() for item in content.split(',') if item.strip()]
+            
+            class_name = self.ask_class_window(items)
+
             
         # if ask for image description checked
         image_description = None
@@ -434,3 +448,26 @@ class ImagesetTab(tk.Frame):
             self.image_description_entry.clear()
             # roll
             self.roll(None)
+
+    def ask_class_window(self, items):
+        top_level = tk.Toplevel()
+        top_level.title('Choose an item')
+
+        selected_item = None
+
+        def on_button_click(item):
+            nonlocal selected_item
+            selected_item = item
+            top_level.destroy()
+
+        num_columns = int(math.sqrt(len(items)))
+        for i, item in enumerate(items):
+            row, col = divmod(i, num_columns)
+            button = tk.Button(top_level, text=item, command=lambda item=item: on_button_click(item))
+            button.grid(row=row, column=col, padx=5, pady=5, sticky='news')
+
+        top_level.grab_set()
+        top_level.protocol("WM_DELETE_WINDOW", top_level.quit)
+        top_level.wait_window()
+
+        return selected_item

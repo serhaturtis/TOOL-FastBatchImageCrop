@@ -149,6 +149,9 @@ class TagEditorTab(tk.Frame):
             self.load_tag_data()
 
     def load_tag_data(self):
+        self.class_name_entry.set_value('')
+        self.image_tags_entry.set_value('')
+        self.current_tag_data = None
         tag_data = fops.load_tag_data(self.input_files[self.current_image_index][1].split('.')[0])
         print(tag_data)
         if tag_data is not None:
