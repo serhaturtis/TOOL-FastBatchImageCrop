@@ -49,7 +49,7 @@ class TagEditorTab(tk.Frame):
     raw_image = None
     scaled_image = None
     ratio = None
-    current_tag_data = None
+    current_tag_data = {}
 
     def __init__(self, console):
         super().__init__()
@@ -151,7 +151,7 @@ class TagEditorTab(tk.Frame):
     def load_tag_data(self):
         self.class_name_entry.set_value('')
         self.image_tags_entry.set_value('')
-        self.current_tag_data = None
+        self.current_tag_data.clear()
         tag_data = fops.load_tag_data(self.input_files[self.current_image_index][1].split('.')[0])
         print(tag_data)
         if tag_data is not None:
@@ -184,7 +184,7 @@ class TagEditorTab(tk.Frame):
                 tags_string += '{tag}'.format(tag=tag['tag']) if tags_string == '' else ', {tag}'.format(tag=tag['tag'])
                 self.image_tags_entry.set_value(tags_string)
         else:
-            self.current_tag_data = TAGDATA_TEMPLATE
+            self.current_tag_data = TAGDATA_TEMPLATE.copy()
 
     def load_image_raw(self):
         self.raw_image = iops.load_image(self.input_files[self.current_image_index][1])
