@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter.simpledialog import askstring
 import math
+import yaml
 
 import fileops as fops
 import imageops as iops
@@ -39,6 +40,7 @@ class ImagesetTab(tk.Frame):
     use_class_name_checkbox = None
     use_image_description_checkbox = None
     ask_for_classes_checkbox = None
+    ask_for_tags_checkbox = None
     class_name_entry = None
     image_description_entry = None
 
@@ -65,6 +67,7 @@ class ImagesetTab(tk.Frame):
     scaled_image = None
     ratio = None
     crop_count = 0
+    attribute_selector = None
     
     def __init__(self, console):
         super().__init__()
@@ -75,7 +78,7 @@ class ImagesetTab(tk.Frame):
 
     
     def init_data(self):
-        return
+        self.attribute_selector = self.AttributeSelector('tags.yaml')
     
     def init_ui(self):
         self.columnconfigure(0, weight=1)
@@ -141,6 +144,9 @@ class ImagesetTab(tk.Frame):
 
         self.ask_for_classes_checkbox = ui.CheckBox('Ask Classes (classes.txt)', None, parameters_frame)
         self.ask_for_classes_checkbox.grid(column=0, row=8, sticky='news')
+
+        self.ask_for_tags_checkbox = ui.CheckBox('Ask Tags (tags.yaml)', None, parameters_frame)
+        self.ask_for_tags_checkbox.grid(column=0, row=9, sticky='news')
 
         self.scale_output_checkbox.set_value(0)
         self.roll_on_crop_checkbox.set_value(1)
@@ -406,13 +412,14 @@ class ImagesetTab(tk.Frame):
                 items = [item.strip() for item in content.split(',') if item.strip()]
             
             class_name = self.ask_class_window(items)
-
             
         # if ask for image description checked
         image_description = None
         if self.use_image_description_checkbox.get_value():
             #image_description = askstring('Image description', 'What is in the image?')
             image_description = self.image_description_entry.get_value()
+        elif self.ask_for_tags_checkbox.get_value():
+            image_description = self.attribute_selector.ask_attributes()
 
         # take coordinates and crop
         cropped_image = self.get_image_inside_rectangle()
@@ -471,3 +478,44 @@ class ImagesetTab(tk.Frame):
         top_level.wait_window()
 
         return selected_item
+
+    class AttributeSelector:
+        def __init__(self, file_path):
+            with open(file_path, 'r') as f:
+                self.attributes = yaml.load(f, Loader=yaml.FullLoader)
+    
+        def ask_attributes(self):
+            top_level = tk.Toplevel()
+            top_level.title('Choose attributes')
+
+            selected_values = []
+
+            def on_button_click():
+                nonlocal selected_values
+                selected_values = [var.get() for var in self.vars.values()]
+                top_level.destroy()
+
+            num_attributes = len(self.attributes)
+            num_values = max(len(values) for values in self.attributes.values())
+            num_columns = min(num_values, int(math.sqrt(num_attributes)))
+
+            self.vars = {}
+            for i, (attribute, values) in enumerate(self.attributes.items()):
+                row, col = divmod(i, num_columns)
+                lf = tk.LabelFrame(top_level, text=attribute)
+                lf.grid(row=row, column=col, padx=10, pady=5, sticky='news')
+                var = tk.StringVar(value=values[0])
+                self.vars[attribute] = var
+                for value in values:
+                    rb = tk.Radiobutton(lf, text=value, value=value, variable=var)
+                    rb.pack(padx=5, pady=2, expand=True)
+
+            button_ok = tk.Button(top_level, text='OK', command=on_button_click)
+            button_ok.grid(row=math.ceil(num_attributes / num_columns), column=0, columnspan=num_columns, pady=10)
+
+            top_level.grab_set()
+            top_level.protocol("WM_DELETE_WINDOW", top_level.quit)
+            top_level.wait_window()
+
+            selected_values_str = ', '.join([v for v in selected_values if v])
+            return selected_values_str

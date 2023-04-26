@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
 import cv2
-import time
+import math
+import yaml
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
@@ -40,6 +41,7 @@ class VideoTab(tk.Frame):
     scale_output_checkbox = None
     ask_for_class_name_checkbox = None
     ask_for_image_description_checkbox = None
+    ask_for_classes_checkbox = None
     
     # buttons
     seek_backward_button = None
@@ -152,6 +154,9 @@ class VideoTab(tk.Frame):
         
         self.ask_for_image_description_checkbox = ui.CheckBox('Ask For Image Description', None, parameters_frame)
         self.ask_for_image_description_checkbox.grid(column=0, row=6, sticky='news')
+
+        self.ask_for_tags_checkbox = ui.CheckBox('Ask Tags (tags.yaml)', None, parameters_frame)
+        self.ask_for_tags_checkbox.grid(column=0, row=7, sticky='news')
 
         self.scale_output_checkbox.set_value(0)
         self.ask_for_class_name_checkbox.set_value(0)
@@ -464,6 +469,8 @@ class VideoTab(tk.Frame):
         image_description = None
         if self.ask_for_image_description_checkbox.get_value():
             image_description = askstring('Image description', 'What is in the image?')
+        elif self.ask_for_tags_checkbox.get_value():
+            image_description = self.attribute_selector.ask_attributes()
 
         # take coordinates and crop
         cropped_image = self.get_image_inside_rectangle()
@@ -501,3 +508,44 @@ class VideoTab(tk.Frame):
         box_rel_bl_y = box_rel_tl_y + (self.current_rect_lower - self.current_rect_upper)
         # get rect data and crop image
         return iops.crop_image(self.raw_image, self.ratio, (box_rel_tl_x, box_rel_tl_y, box_rel_bl_x, box_rel_bl_y))
+    
+    class AttributeSelector:
+        def __init__(self, file_path):
+            with open(file_path, 'r') as f:
+                self.attributes = yaml.load(f, Loader=yaml.FullLoader)
+    
+        def ask_attributes(self):
+            top_level = tk.Toplevel()
+            top_level.title('Choose attributes')
+
+            selected_values = []
+
+            def on_button_click():
+                nonlocal selected_values
+                selected_values = [var.get() for var in self.vars.values()]
+                top_level.destroy()
+
+            num_attributes = len(self.attributes)
+            num_values = max(len(values) for values in self.attributes.values())
+            num_columns = min(num_values, int(math.sqrt(num_attributes)))
+
+            self.vars = {}
+            for i, (attribute, values) in enumerate(self.attributes.items()):
+                row, col = divmod(i, num_columns)
+                lf = tk.LabelFrame(top_level, text=attribute)
+                lf.grid(row=row, column=col, padx=10, pady=5, sticky='news')
+                var = tk.StringVar(value=values[0])
+                self.vars[attribute] = var
+                for value in values:
+                    rb = tk.Radiobutton(lf, text=value, value=value, variable=var)
+                    rb.pack(padx=5, pady=2, expand=True)
+
+            button_ok = tk.Button(top_level, text='OK', command=on_button_click)
+            button_ok.grid(row=math.ceil(num_attributes / num_columns), column=0, columnspan=num_columns, pady=10)
+
+            top_level.grab_set()
+            top_level.protocol("WM_DELETE_WINDOW", top_level.quit)
+            top_level.wait_window()
+
+            selected_values_str = ', '.join([v for v in selected_values if v])
+            return selected_values_str
