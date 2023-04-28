@@ -530,21 +530,21 @@ class VideoTab(tk.Frame):
             num_values = max(len(values) for values in self.attributes.values())
             num_columns = 8
             num_rows = (num_attributes + num_columns - 1) // num_columns
+            
+            button_ok = tk.Button(top_level, text='OK', command=on_button_click)
+            button_ok.grid(row=0, column=0, columnspan=num_columns, pady=10, sticky='news')
     
             self.vars = {}
             for i, (attribute, values) in enumerate(self.attributes.items()):
                 row = i // num_columns
                 col = i % num_columns
                 lf = tk.LabelFrame(top_level, text=attribute)
-                lf.grid(row=row, column=col, padx=10, pady=5, sticky='news')
+                lf.grid(row=row+1, column=col, padx=10, pady=5, sticky='news')
                 var = tk.StringVar(value=values[0])
                 self.vars[attribute] = var
                 for value in values:
                     rb = tk.Radiobutton(lf, text=value, value=value, variable=var)
                     rb.pack(padx=5, pady=2, expand=True)
-    
-            button_ok = tk.Button(top_level, text='OK', command=on_button_click)
-            button_ok.grid(row=num_rows, column=0, columnspan=num_columns, pady=10)
     
             top_level.grab_set()
             top_level.protocol("WM_DELETE_WINDOW", top_level.quit)
