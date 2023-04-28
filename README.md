@@ -4,6 +4,13 @@ A simple UI tool to batch crop images to prepare datasets.
 
 ![Preview](./mat/preview.gif)
 
+## Features
+- Crop images from videos and image folders with custom aspect ratios
+- Resize cropped images automatically
+- Extract frames from videos
+- Crop iamges from videos while playing the video
+- Save cropped images to different class folders
+- Tag images to txt files while cropping
 
 ## Usage
 
