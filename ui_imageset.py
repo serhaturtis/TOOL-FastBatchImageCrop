@@ -487,21 +487,23 @@ class ImagesetTab(tk.Frame):
         def ask_attributes(self):
             top_level = tk.Toplevel()
             top_level.title('Choose attributes')
-
+    
             selected_values = []
-
+    
             def on_button_click():
                 nonlocal selected_values
                 selected_values = [var.get() for var in self.vars.values()]
                 top_level.destroy()
-
+    
             num_attributes = len(self.attributes)
             num_values = max(len(values) for values in self.attributes.values())
-            num_columns = min(num_values, int(math.sqrt(num_attributes)))
-
+            num_columns = 8
+            num_rows = (num_attributes + num_columns - 1) // num_columns
+    
             self.vars = {}
             for i, (attribute, values) in enumerate(self.attributes.items()):
-                row, col = divmod(i, num_columns)
+                row = i // num_columns
+                col = i % num_columns
                 lf = tk.LabelFrame(top_level, text=attribute)
                 lf.grid(row=row, column=col, padx=10, pady=5, sticky='news')
                 var = tk.StringVar(value=values[0])
@@ -509,13 +511,14 @@ class ImagesetTab(tk.Frame):
                 for value in values:
                     rb = tk.Radiobutton(lf, text=value, value=value, variable=var)
                     rb.pack(padx=5, pady=2, expand=True)
-
+    
             button_ok = tk.Button(top_level, text='OK', command=on_button_click)
-            button_ok.grid(row=math.ceil(num_attributes / num_columns), column=0, columnspan=num_columns, pady=10)
-
+            button_ok.grid(row=num_rows, column=0, columnspan=num_columns, pady=10)
+    
             top_level.grab_set()
             top_level.protocol("WM_DELETE_WINDOW", top_level.quit)
             top_level.wait_window()
-
+    
             selected_values_str = ', '.join([v for v in selected_values if v])
             return selected_values_str
+    
