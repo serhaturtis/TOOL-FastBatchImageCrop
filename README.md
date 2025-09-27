@@ -14,7 +14,7 @@ A simple UI tool to batch crop images to prepare datasets.
 
 ## Usage
 
-Install requirements (only pillow and opencv) with;
+Install requirements (only pillow, opencv and pyyaml) with;
 
 >pip install -r requirements.txt
 
