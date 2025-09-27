@@ -1,3 +1,3 @@
-opencv-python==4.7.0.68
-Pillow==9.3.0
+opencv-python
+Pillow
 pyyaml
