@@ -1,7 +1,11 @@
+"""UI generic components."""
+
 import tkinter as tk
 import tkinter.filedialog
 from tkinter import ttk
 import os
+
+_shared_last_path = ''
 
 
 def validate_int(p):
@@ -28,7 +32,6 @@ class CheckBox(tk.Frame):
     button = None
 
     def __init__(self, text, callback, master=None):
-        super().__init__()
         tk.Frame.__init__(self, master)
 
         self.callback_function = callback
@@ -60,7 +63,6 @@ class ScrollableListbox(tk.LabelFrame):
     onclick_callback = None
 
     def __init__(self, label, master=None):
-        super().__init__()
         tk.LabelFrame.__init__(self, master, text=label)
 
         self.listbox = tk.Listbox(self)
@@ -97,7 +99,6 @@ class LabelEntryFileBrowse(tk.LabelFrame):
     filetypes = None
 
     def __init__(self, label, master=None, callback=None, filetypes=None):
-        super().__init__()
         tk.LabelFrame.__init__(self, master, text=label)
 
         self.callback_f = callback
@@ -113,32 +114,38 @@ class LabelEntryFileBrowse(tk.LabelFrame):
         button.grid(column=1, row=0, sticky='news')
 
     def open_browse_dialogue(self):
-        if self.last_path == '':
+        global _shared_last_path
+        if _shared_last_path == '':
             initialpath = os.path.expanduser('~')
         else:
-            initialpath = self.last_path
+            initialpath = _shared_last_path
 
         if self.filetypes:
             path = tk.filedialog.askopenfilename(filetypes=self.filetypes, initialdir=initialpath)
         else:
             path = tk.filedialog.askopenfilename(initialdir=initialpath)
-        
+
         if path:
-            self.last_path = path
+            _shared_last_path = os.path.dirname(path)
             self.text_variable.set(path)
             if self.callback_f is not None:
-                self.callback_f(self.last_path)
+                self.callback_f(path)
 
     def get_value(self):
         return self.text_variable.get()
 
     def set_value(self, value):
+        global _shared_last_path
         self.text_variable.set(value)
-        self.last_path = value
-        
+        if os.path.isfile(value):
+            _shared_last_path = os.path.dirname(value)
+        else:
+            _shared_last_path = value
+
     def clear(self):
+        global _shared_last_path
         self.text_variable.set('')
-        self.last_path = ''
+        _shared_last_path = ''
 
 
 class LabelEntryFolderBrowse(tk.LabelFrame):
@@ -147,7 +154,6 @@ class LabelEntryFolderBrowse(tk.LabelFrame):
     callback_f = None
 
     def __init__(self, label, master=None, callback=None):
-        super().__init__()
         tk.LabelFrame.__init__(self, master, text=label)
 
         self.callback_f = callback
@@ -162,28 +168,31 @@ class LabelEntryFolderBrowse(tk.LabelFrame):
         button.grid(column=1, row=0, sticky='news')
 
     def open_browse_dialogue(self):
-        if self.last_path == '':
+        global _shared_last_path
+        if _shared_last_path == '':
             initialpath = os.path.expanduser('~')
         else:
-            initialpath = self.last_path
+            initialpath = _shared_last_path
 
         path = tk.filedialog.askdirectory(initialdir=initialpath)
         if path:
-            self.last_path = path
+            _shared_last_path = path
             self.text_variable.set(path)
             if self.callback_f is not None:
-                self.callback_f(self.last_path)
+                self.callback_f(_shared_last_path)
 
     def get_value(self):
         return self.text_variable.get()
 
     def set_value(self, value):
+        global _shared_last_path
         self.text_variable.set(value)
-        self.last_path = value
-        
+        _shared_last_path = value
+
     def clear(self):
+        global _shared_last_path
         self.text_variable.set('')
-        self.last_path = ''
+        _shared_last_path = ''
 
 
 class LabelEntryText(tk.LabelFrame):
@@ -231,7 +240,8 @@ class LabelEntryInt(tk.LabelFrame):
         self.entry.grid(column=0, row=0, sticky='news', padx=5, pady=5)
 
     def get_value(self):
-        return int(self.text_variable.get())
+        val = self.text_variable.get()
+        return int(val) if val else 0
 
     def set_value(self, value):
         self.text_variable.set(str(value))
@@ -265,7 +275,8 @@ class LabelEntryFloat(tk.LabelFrame):
         self.entry.config(state='disabled')
 
     def get_value(self):
-        return float(self.text_variable.get())
+        val = self.text_variable.get()
+        return float(val) if val else 0.0
 
     def set_value(self, value):
         self.text_variable.set(str(value))
@@ -276,14 +287,10 @@ class SingleLineConsole(tk.Frame):
     console_stringvar = None
 
     def __init__(self, master=None):
-        super().__init__()
         tk.Frame.__init__(self, master)
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
-        self.init_ui()
-
-    def init_ui(self):
         self.console_stringvar = tk.StringVar()
         self.console_label = tk.Label(self, textvariable=self.console_stringvar, bg='black', fg='green')
         self.console_label.pack(expand=True, fill=tk.BOTH)
@@ -302,14 +309,10 @@ class Console(tk.LabelFrame):
     console_scrollbar = None
 
     def __init__(self, master=None, text='Console'):
-        super().__init__()
         tk.LabelFrame.__init__(self, master, text=text)
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
-        self.init_ui()
-
-    def init_ui(self):
         self.console_listbox = tk.Listbox(self, bg='black', fg='green', highlightcolor='black',
                                           selectbackground='green', activestyle=tk.NONE)
         self.console_scrollbar = tk.Scrollbar(self.console_listbox)
@@ -341,7 +344,6 @@ class ListboxWithControls(tk.Frame):
 
     def __init__(self, master=None, title='', up_cmd=None, down_cmd=None, add_cmd=None, remove_cmd=None, clear_cmd=None,
                  process_cmd=None, item_selected_cmd=None):
-        super().__init__()
         tk.Frame.__init__(self, master)
 
         self.up_cmd = up_cmd
@@ -420,7 +422,6 @@ class ComboboxWithDetails(tk.Frame):
     current_frame = None
 
     def __init__(self, master=None, text='', console=None, item_list=None, get_item_details_frame_cmd=None):
-        super().__init__()
         tk.Frame.__init__(self, master)
         self.console = console
         self.item_list = item_list
@@ -455,5 +456,3 @@ class ComboboxWithDetails(tk.Frame):
 
         return
 
-    def get_details_data(self):
-        return
