@@ -592,9 +592,11 @@ class VideoTab(tk.Frame, RectangleMixin):
         box_rel_tl_y = self.current_rect_upper - (
             (self.current_canvas_size_y - self.scaled_image.height) / 2
         )
-            box_rel_bl_x = box_rel_tl_x + (self.current_rect_right - self.current_rect_left)
-            box_rel_bl_y = box_rel_tl_y + (self.current_rect_upper - self.current_rect_lower)
-            return iops.crop_image(
+        box_rel_bl_x = box_rel_tl_x + (self.current_rect_right - self.current_rect_left)
+        box_rel_bl_y = box_rel_tl_y + (
+            self.current_rect_upper - self.current_rect_lower
+        )
+        return iops.crop_image(
             self.raw_image,
             self.ratio,
             (box_rel_tl_x, box_rel_tl_y, box_rel_bl_x, box_rel_bl_y),
